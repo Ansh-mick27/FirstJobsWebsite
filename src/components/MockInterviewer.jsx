@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, User, Bot, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, User, Bot, Loader2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import styles from './MockInterviewer.module.css';
 
 export default function MockInterviewer({ companyName }) {
@@ -9,6 +9,13 @@ export default function MockInterviewer({ companyName }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    // Audio Features State
+    const [isListening, setIsListening] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
+    const recognitionRef = useRef(null);
+    const synthRef = useRef(null);
+
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -19,12 +26,96 @@ export default function MockInterviewer({ companyName }) {
         scrollToBottom();
     }, [messages, isLoading]);
 
+    // Initialize Web Speech APIs
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event) => {
+                    let currentTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        currentTranscript += event.results[i][0].transcript;
+                    }
+                    setInput(currentTranscript);
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech recognition error", event.error);
+                    setIsListening(false);
+                };
+
+                recognition.onend = () => {
+                    setIsListening(false);
+                    // We can't auto-submit reliably here without risking infinite loops or submitting empty/partial states, 
+                    // so we rely on the user to press Send or Enter after reviewing their transcribed text.
+                };
+
+                recognitionRef.current = recognition;
+            }
+
+            if ('speechSynthesis' in window) {
+                synthRef.current = window.speechSynthesis;
+            }
+        }
+    }, []);
+
+    const speak = (text) => {
+        if (!synthRef.current || isMuted) return;
+
+        // Cancel any ongoing speech
+        synthRef.current.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Try to find a good English voice
+        const voices = synthRef.current.getVoices();
+        const preferredVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0];
+
+        if (preferredVoice) utterance.voice = preferredVoice;
+
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        synthRef.current.speak(utterance);
+    };
+
+    const toggleListening = () => {
+        if (!recognitionRef.current) {
+            alert("Your browser does not support Speech Recognition.");
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+        } else {
+            setInput(''); // Clear input before starting
+            try {
+                recognitionRef.current.start();
+                setIsListening(true);
+            } catch (err) {
+                // Ignore 'already started' errors
+            }
+        }
+    };
+
+    const toggleMute = () => {
+        if (!isMuted && synthRef.current) {
+            synthRef.current.cancel(); // Stop speaking immediately if muting
+        }
+        setIsMuted(!isMuted);
+    };
+
     const startInterview = async () => {
         setIsOpen(true);
         if (messages.length === 0) {
             setIsLoading(true);
             try {
-                // Trigger the initial AI greeting
                 const res = await fetch('/api/interview-chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -33,6 +124,7 @@ export default function MockInterviewer({ companyName }) {
                 const data = await res.json();
                 if (data.reply) {
                     setMessages([{ role: 'assistant', content: data.reply }]);
+                    speak(data.reply);
                 }
             } catch (err) {
                 console.error("Failed to start chat:", err);
@@ -43,7 +135,13 @@ export default function MockInterviewer({ companyName }) {
     };
 
     const sendMessage = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+
+        // Force stop listening if user submits manually
+        if (isListening && recognitionRef.current) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+        }
         if (!input.trim() || isLoading) return;
 
         const userMsg = { role: 'user', content: input.trim() };
@@ -63,6 +161,7 @@ export default function MockInterviewer({ companyName }) {
 
             if (data.reply) {
                 setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+                speak(data.reply);
             } else {
                 setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error." }]);
             }
@@ -92,9 +191,18 @@ export default function MockInterviewer({ companyName }) {
                                     <span className={styles.status}>AI actively listening</span>
                                 </div>
                             </div>
-                            <button onClick={() => setIsOpen(false)} className={styles.closeBtn}>
-                                <X size={20} />
-                            </button>
+                            <div className={styles.headerActions}>
+                                <button
+                                    onClick={toggleMute}
+                                    className={`${styles.actionBtn} ${isMuted ? styles.muted : ''}`}
+                                    title={isMuted ? "Unmute AI Voice" : "Mute AI Voice"}
+                                >
+                                    {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                </button>
+                                <button onClick={() => setIsOpen(false)} className={styles.actionBtn}>
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className={styles.messages}>
@@ -125,12 +233,22 @@ export default function MockInterviewer({ companyName }) {
                         </div>
 
                         <form onSubmit={sendMessage} className={styles.inputArea}>
+                            <motion.button
+                                type="button"
+                                onClick={toggleListening}
+                                className={`${styles.micBtn} ${isListening ? styles.listening : ''}`}
+                                animate={isListening ? { scale: [1, 1.1, 1], boxShadow: ["0px 0px 0px 0px rgba(16, 185, 129, 0)", "0px 0px 0px 10px rgba(16, 185, 129, 0.3)", "0px 0px 0px 0px rgba(16, 185, 129, 0)"] } : {}}
+                                transition={isListening ? { duration: 1.5, repeat: Infinity } : {}}
+                                title="Use Microphone"
+                            >
+                                {isListening ? <Mic size={18} /> : <MicOff size={18} />}
+                            </motion.button>
                             <input
                                 type="text"
-                                placeholder="Type your answer..."
+                                placeholder={isListening ? "Listening..." : "Type your answer..."}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                disabled={isLoading}
+                                disabled={isLoading || isListening}
                                 className={styles.input}
                             />
                             <button type="submit" disabled={!input.trim() || isLoading} className={styles.sendBtn}>
