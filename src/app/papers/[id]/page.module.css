@@ -335,3 +335,141 @@
         padding: var(--space-5);
     }
 }
+
+.downloadBtn {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    transition: all 0.2s;
+    font-family: var(--font-primary);
+}
+
+.downloadBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* --- PDF Print Layout Styles --- */
+
+.printablePdfContainer {
+    /* Initially hidden via inline style, but styled for when html2pdf clones it */
+    background: white;
+    color: #1a1a1a;
+    font-family: 'Inter', sans-serif;
+    padding: 20px;
+    width: 800px;
+    /* Fixed width for consistent PDF A4 rendering */
+}
+
+.pdfPage {
+    background: white;
+}
+
+.pdfHeader {
+    text-align: center;
+    border-bottom: 2px solid #10b981;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.pdfHeader h1 {
+    font-size: 28px;
+    color: #111827;
+    margin: 0 0 10px 0;
+}
+
+.pdfHeader p {
+    font-size: 16px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.pdfSection {
+    margin-bottom: 40px;
+}
+
+.pdfSection h2 {
+    font-size: 22px;
+    color: #10b981;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.pdfInterviewItem {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f9fafb;
+    border-left: 4px solid #10b981;
+    border-radius: 4px;
+}
+
+.pdfQuestionTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.pdfCategoryBadge {
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.pdfAnswer {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.pdfTestItem {
+    margin-bottom: 30px;
+    page-break-inside: avoid;
+}
+
+.pdfOptions {
+    list-style: none;
+    padding: 0 0 0 20px;
+    margin: 12px 0;
+}
+
+.pdfOptions li {
+    font-size: 14px;
+    color: #4b5563;
+    margin-bottom: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.pdfCorrectOpt {
+    background: #ecfdf5;
+    color: #065f46 !important;
+    font-weight: 500;
+}
+
+.pdfExplanation {
+    margin-top: 10px;
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.5;
+}

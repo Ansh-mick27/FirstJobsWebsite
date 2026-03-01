@@ -15,6 +15,7 @@ export default function MockInterviewer({ companyName }) {
     const [isMuted, setIsMuted] = useState(false);
     const recognitionRef = useRef(null);
     const synthRef = useRef(null);
+    const baseInputRef = useRef('');
 
     const messagesEndRef = useRef(null);
 
@@ -32,16 +33,17 @@ export default function MockInterviewer({ companyName }) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
                 const recognition = new SpeechRecognition();
-                recognition.continuous = false;
+                recognition.continuous = true;
                 recognition.interimResults = true;
                 recognition.lang = 'en-US';
 
                 recognition.onresult = (event) => {
                     let currentTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    for (let i = 0; i < event.results.length; ++i) {
                         currentTranscript += event.results[i][0].transcript;
                     }
-                    setInput(currentTranscript);
+                    const separator = baseInputRef.current && currentTranscript.trim() ? ' ' : '';
+                    setInput(baseInputRef.current + separator + currentTranscript);
                 };
 
                 recognition.onerror = (event) => {
@@ -51,8 +53,6 @@ export default function MockInterviewer({ companyName }) {
 
                 recognition.onend = () => {
                     setIsListening(false);
-                    // We can't auto-submit reliably here without risking infinite loops or submitting empty/partial states, 
-                    // so we rely on the user to press Send or Enter after reviewing their transcribed text.
                 };
 
                 recognitionRef.current = recognition;
@@ -94,7 +94,7 @@ export default function MockInterviewer({ companyName }) {
             recognitionRef.current.stop();
             setIsListening(false);
         } else {
-            setInput(''); // Clear input before starting
+            baseInputRef.current = input; // Capture existing input before starting
             try {
                 recognitionRef.current.start();
                 setIsListening(true);
