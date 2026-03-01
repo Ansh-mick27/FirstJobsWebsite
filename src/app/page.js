@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Building2, Brain, FileText, MessageSquare, Sparkles, Users, BookOpen, Trophy, ChevronRight, Star } from 'lucide-react';
+import { motion } from 'framer-motion';
+import AntigravityCard from '@/components/AntigravityCard';
 import styles from './page.module.css';
 
 function AnimatedCounter({ end, duration = 2000, suffix = '' }) {
@@ -110,15 +112,35 @@ export default function HomePage() {
         <div className="container">
           <h2 className="section-title">Why Choose FirstJobs?</h2>
           <p className="section-subtitle">Everything you need to ace your campus placement, powered by AI.</p>
-          <div className={styles.featuresGrid}>
+          <motion.div
+            className={styles.featuresGrid}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.1 }
+              }
+            }}
+          >
             {features.map((f, i) => (
-              <div key={i} className={styles.featureCard} style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className={styles.featureIcon}>{f.icon}</div>
-                <h3>{f.title}</h3>
-                <p>{f.desc}</p>
-              </div>
+              <motion.div
+                key={i}
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+                }}
+              >
+                <AntigravityCard className={styles.featureCard}>
+                  <div className={styles.featureIcon}>{f.icon}</div>
+                  <h3>{f.title}</h3>
+                  <p>{f.desc}</p>
+                </AntigravityCard>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -144,23 +166,44 @@ export default function HomePage() {
         <div className="container">
           <h2 className="section-title">Student Success Stories</h2>
           <p className="section-subtitle">Hear from students who landed their dream placements.</p>
-          <div className={styles.testimonialGrid}>
+          <motion.div
+            className={styles.testimonialGrid}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.15 }
+              }
+            }}
+          >
             {testimonials.map((t, i) => (
-              <div key={i} className={styles.testimonialCard}>
-                <div className={styles.testimonialStars}>
-                  {[...Array(t.rating)].map((_, j) => <Star key={j} size={16} fill="#f59e0b" color="#f59e0b" />)}
-                </div>
-                <p className={styles.testimonialText}>"{t.text}"</p>
-                <div className={styles.testimonialAuthor}>
-                  <div className={styles.testimonialAvatar}>{t.name[0]}</div>
-                  <div>
-                    <strong>{t.name}</strong>
-                    <span>{t.role}</span>
+              <motion.div
+                key={i}
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+                }}
+                style={{ height: '100%' }}
+              >
+                <AntigravityCard className={styles.testimonialCard}>
+                  <div className={styles.testimonialStars}>
+                    {[...Array(t.rating)].map((_, j) => <Star key={j} size={16} fill="#f59e0b" color="#f59e0b" />)}
                   </div>
-                </div>
-              </div>
+                  <p className={styles.testimonialText}>"{t.text}"</p>
+                  <div className={styles.testimonialAuthor}>
+                    <div className={styles.testimonialAvatar}>{t.name[0]}</div>
+                    <div>
+                      <strong>{t.name}</strong>
+                      <span>{t.role}</span>
+                    </div>
+                  </div>
+                </AntigravityCard>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 

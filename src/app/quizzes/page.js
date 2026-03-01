@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Brain, Clock, HelpCircle, ArrowRight, LayoutTemplate } from 'lucide-react';
+import { motion } from 'framer-motion';
+import AntigravityCard from '@/components/AntigravityCard';
 import styles from './page.module.css';
 
 const difficultyColors = {
@@ -64,32 +66,48 @@ export default function QuizzesPage() {
                         ))}
                     </div>
                 ) : (
-                    <div className={styles.grid}>
+                    <motion.div
+                        className={styles.grid}
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            hidden: { opacity: 0 },
+                            visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+                        }}
+                    >
                         {quizzes.map((quiz) => (
-                            <div key={quiz.id} className={styles.card}>
-                                <div className={styles.cardHeader}>
-                                    <span className={styles.categoryBadge}>{quiz.category}</span>
-                                    <span
-                                        className={styles.diffBadge}
-                                        style={{ color: difficultyColors[quiz.difficulty], backgroundColor: `${difficultyColors[quiz.difficulty]}15` }}
-                                    >
-                                        {quiz.difficulty}
-                                    </span>
-                                </div>
-                                <h3>{quiz.title}</h3>
-                                {quiz.company && <p className={styles.companyName}>For {quiz.company.name}</p>}
+                            <motion.div
+                                key={quiz.id}
+                                variants={{
+                                    hidden: { opacity: 0, y: 30 },
+                                    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+                                }}
+                            >
+                                <AntigravityCard className={styles.card}>
+                                    <div className={styles.cardHeader}>
+                                        <span className={styles.categoryBadge}>{quiz.category}</span>
+                                        <span
+                                            className={styles.diffBadge}
+                                            style={{ color: difficultyColors[quiz.difficulty], backgroundColor: `${difficultyColors[quiz.difficulty]}15` }}
+                                        >
+                                            {quiz.difficulty}
+                                        </span>
+                                    </div>
+                                    <h3>{quiz.title}</h3>
+                                    {quiz.company && <p className={styles.companyName}>For {quiz.company.name}</p>}
 
-                                <div className={styles.quizMeta}>
-                                    <span><HelpCircle size={16} /> {quiz._count?.questions || 0} Questions</span>
-                                    <span><Clock size={16} /> {quiz._count?.questions ? quiz._count.questions * 2 : 0} Mins</span>
-                                </div>
+                                    <div className={styles.quizMeta}>
+                                        <span><HelpCircle size={16} /> {quiz._count?.questions || 0} Questions</span>
+                                        <span><Clock size={16} /> {quiz._count?.questions ? quiz._count.questions * 2 : 0} Mins</span>
+                                    </div>
 
-                                <Link href={`/quizzes/${quiz.id}`} className={styles.startBtn}>
-                                    Start Quiz <ArrowRight size={16} />
-                                </Link>
-                            </div>
+                                    <Link href={`/quizzes/${quiz.id}`} className={styles.startBtn}>
+                                        Start Quiz <ArrowRight size={16} />
+                                    </Link>
+                                </AntigravityCard>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 )}
 
                 {!loading && quizzes.length === 0 && (

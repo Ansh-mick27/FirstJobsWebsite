@@ -9,6 +9,14 @@
   --color-bg-dark: #022c22;
   --color-bg-darker: #011a14;
 
+  /* Antigravity Theme Background */
+  --antigravity-blob1: rgba(16, 185, 129, 0.08);
+  /* Emerald */
+  --antigravity-blob2: rgba(20, 184, 166, 0.08);
+  /* Teal */
+  --antigravity-blob3: rgba(6, 182, 212, 0.05);
+  /* Cyan */
+
   --color-primary: #10b981;
   --color-primary-dark: #059669;
   --color-primary-light: #34d399;
@@ -118,6 +126,49 @@ body {
   background: var(--color-bg);
   line-height: 1.6;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* Antigravity Orbital Backgrounds */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: -1;
+  pointer-events: none;
+  animation: drift 25s ease-in-out infinite alternate;
+}
+
+body::before {
+  top: -10%;
+  left: -10%;
+  background: radial-gradient(circle, var(--antigravity-blob1) 0%, transparent 70%);
+}
+
+body::after {
+  bottom: -20%;
+  right: -10%;
+  background: radial-gradient(circle, var(--antigravity-blob2) 0%, transparent 70%);
+  animation-duration: 30s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(5%, 10%) scale(1.1);
+  }
+
+  100% {
+    transform: translate(-5%, 5%) scale(0.95);
+  }
 }
 
 h1,

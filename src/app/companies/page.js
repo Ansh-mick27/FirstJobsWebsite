@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, Building2, ArrowRight, Users, MapPin, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
+import AntigravityCard from '@/components/AntigravityCard';
 import styles from './page.module.css';
 
 export default function CompaniesPage() {
@@ -57,32 +59,50 @@ export default function CompaniesPage() {
                         ))}
                     </div>
                 ) : (
-                    <div className={styles.grid}>
+                    <motion.div
+                        className={styles.grid}
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            hidden: { opacity: 0 },
+                            visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+                        }}
+                    >
                         {companies.map((company) => (
-                            <Link href={`/companies/${company.slug}`} key={company.id} className={styles.card}>
-                                <div className={styles.cardTop}>
-                                    <div className={styles.logo}>
-                                        {company.logo ? (
-                                            <img src={company.logo} alt={company.name} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                                        ) : null}
-                                        <div className={styles.logoFallback} style={{ display: company.logo ? 'none' : 'flex' }}>
-                                            <Building2 size={24} />
+                            <motion.div
+                                key={company.id}
+                                variants={{
+                                    hidden: { opacity: 0, y: 30 },
+                                    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+                                }}
+                            >
+                                <Link href={`/companies/${company.slug}`} style={{ display: 'block', height: '100%' }}>
+                                    <AntigravityCard className={styles.card}>
+                                        <div className={styles.cardTop}>
+                                            <div className={styles.logo}>
+                                                {company.logo ? (
+                                                    <img src={company.logo} alt={company.name} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                                                ) : null}
+                                                <div className={styles.logoFallback} style={{ display: company.logo ? 'none' : 'flex' }}>
+                                                    <Building2 size={24} />
+                                                </div>
+                                            </div>
+                                            <span className={`${styles.badge} ${company.hiringStatus === 'Active' ? styles.badgeActive : ''}`}>
+                                                {company.hiringStatus}
+                                            </span>
                                         </div>
-                                    </div>
-                                    <span className={`${styles.badge} ${company.hiringStatus === 'Active' ? styles.badgeActive : ''}`}>
-                                        {company.hiringStatus}
-                                    </span>
-                                </div>
-                                <h3 className={styles.cardTitle}>{company.name}</h3>
-                                <p className={styles.cardIndustry}>{company.industry}</p>
-                                <p className={styles.cardDesc}>{company.description?.substring(0, 100)}...</p>
-                                <div className={styles.cardFooter}>
-                                    <span className={styles.cardStat}><Users size={14} /> {company.size || 'N/A'}</span>
-                                    <span className={styles.cardLink}>View Details <ArrowRight size={14} /></span>
-                                </div>
-                            </Link>
+                                        <h3 className={styles.cardTitle}>{company.name}</h3>
+                                        <p className={styles.cardIndustry}>{company.industry}</p>
+                                        <p className={styles.cardDesc}>{company.description?.substring(0, 100)}...</p>
+                                        <div className={styles.cardFooter}>
+                                            <span className={styles.cardStat}><Users size={14} /> {company.size || 'N/A'}</span>
+                                            <span className={styles.cardLink}>View Details <ArrowRight size={14} /></span>
+                                        </div>
+                                    </AntigravityCard>
+                                </Link>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 )}
                 {!loading && companies.length === 0 && (
                     <div className={styles.empty}>

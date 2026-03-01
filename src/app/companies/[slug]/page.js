@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Building2, Star, MessageSquare, HelpCircle, FileText, ArrowLeft, Globe, Users, Sparkles, Loader2 } from 'lucide-react';
+import MockInterviewer from '@/components/MockInterviewer';
 import styles from './page.module.css';
 
 export default function CompanyDetailPage() {
@@ -161,6 +162,8 @@ export default function CompanyDetailPage() {
                     )}
                 </div>
             </div>
+
+            <MockInterviewer companyName={company.name} />
         </div>
     );
 }
