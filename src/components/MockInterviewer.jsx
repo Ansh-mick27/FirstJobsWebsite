@@ -74,7 +74,17 @@ export default function MockInterviewer({ companyName }) {
 
         // Try to find a good English voice
         const voices = synthRef.current.getVoices();
-        const preferredVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0];
+
+        // 1. Prioritize High-Quality English Voices
+        let preferredVoice = voices.find(v =>
+            (v.lang === 'en-US' || v.lang === 'en-GB') &&
+            (v.name.includes('Premium') || v.name.includes('Natural') || v.name.includes('Google'))
+        );
+
+        // 2. Fallback to standard English voices
+        if (!preferredVoice) {
+            preferredVoice = voices.find(v => v.lang === 'en-US' || v.lang === 'en-GB') || voices[0];
+        }
 
         if (preferredVoice) utterance.voice = preferredVoice;
 

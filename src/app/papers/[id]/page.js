@@ -52,15 +52,15 @@ export default function PaperViewerPage() {
     };
 
     if (loading) return <div className={styles.loading}>Loading paper...</div>;
-    if (!paper) return (
+    if (!paper || paper.error) return (
         <div className={styles.loading}>
             <h2>Paper not found</h2>
             <Link href="/papers" className={styles.backLink}><ArrowLeft size={16} /> Back to Papers</Link>
         </div>
     );
 
-    const questions = typeof paper.questions === 'string' ? JSON.parse(paper.questions) : paper.questions;
-    const solutions = typeof paper.solutions === 'string' ? JSON.parse(paper.solutions) : paper.solutions;
+    const questions = typeof paper.questions === 'string' ? JSON.parse(paper.questions) : (paper.questions || []);
+    const solutions = typeof paper.solutions === 'string' ? JSON.parse(paper.solutions) : (paper.solutions || []);
     const interviewQs = paper.company?.interviewQuestions || [];
 
     const toggleSolution = (qId) => {
@@ -68,11 +68,11 @@ export default function PaperViewerPage() {
     };
 
     const toggleAllSolutions = () => {
-        if (Object.keys(showSolutions).length === questions.length) {
+        if (Object.keys(showSolutions).length === (questions?.length || 0)) {
             setShowSolutions({});
         } else {
             const all = {};
-            questions.forEach(q => all[q.id] = true);
+            (questions || []).forEach(q => all[q.id] = true);
             setShowSolutions(all);
         }
     };
