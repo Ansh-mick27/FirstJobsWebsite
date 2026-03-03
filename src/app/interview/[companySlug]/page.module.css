@@ -1,0 +1,877 @@
+/* ─── Container ─────────────────────────────────────────────────────────────── */
+.container {
+    height: 100vh;
+    background: var(--bg-base);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ─── Config Phase ───────────────────────────────────────────────────────────── */
+.configScreen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.btnBackConfig {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 32px;
+    transition: color 0.2s;
+    align-self: flex-start;
+}
+
+.btnBackConfig:hover {
+    color: var(--text-primary);
+}
+
+.configCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px;
+    max-width: 500px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.configHeader {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.configAvatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: var(--primary-subtle);
+    border: 1px solid var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-bright);
+}
+
+.configHeader h1 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+}
+
+.configSubtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.configSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.configLabel {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.toggleGroup {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.toggleBtn {
+    flex: 1;
+    padding: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.toggleBtn:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+}
+
+.toggleActive {
+    background: var(--primary-subtle);
+    color: var(--primary-bright);
+    font-weight: 600;
+}
+
+.expectationBox {
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    padding: 16px 20px;
+}
+
+.expectationBox h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.expectationBox ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.expectationBox li {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    padding-left: 16px;
+    position: relative;
+}
+
+.expectationBox li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--primary-bright);
+}
+
+.voiceNote {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 10px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+}
+
+.btnStartInterview {
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: white;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+.btnStartInterview:hover {
+    background: var(--primary-bright);
+    box-shadow: 0 0 24px var(--primary-glow);
+    transform: translateY(-1px);
+}
+
+/* ─── Feedback Loading ───────────────────────────────────────────────────────── */
+.feedbackLoading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
+}
+
+.loadingSpinner {
+    width: 56px;
+    height: 56px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.feedbackLoading h2 {
+    font-size: 1.5rem;
+}
+
+.feedbackLoading p {
+    color: var(--text-secondary);
+}
+
+/* ─── Feedback Screen ────────────────────────────────────────────────────────── */
+.feedbackScreen {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    padding: 32px 24px;
+}
+
+.feedbackCard {
+    max-width: 620px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+}
+
+/* Score Ring */
+.scoreRingWrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+}
+
+.scoreRingSvg {
+    transform: rotate(-90deg);
+}
+
+.ringTrack {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 8;
+}
+
+.ringFill {
+    fill: none;
+    stroke: var(--primary);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 0 339.29;
+    animation: fillRing 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    filter: drop-shadow(0 0 8px var(--primary-glow));
+}
+
+@keyframes fillRing {
+    from {
+        stroke-dasharray: 0 339.29;
+    }
+
+    to {
+        stroke-dasharray: var(--fill-dash) var(--circumference);
+    }
+}
+
+.scoreCenter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.scoreNum {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.scoreLbl {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.feedbackTitle {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    text-align: center;
+}
+
+.overallSummary {
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.7;
+    max-width: 500px;
+    font-size: 0.95rem;
+}
+
+.feedbackSection {
+    width: 100%;
+}
+
+.feedbackSection h3 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+}
+
+.feedbackItem {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.strength {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.weakness {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.25);
+}
+
+.feedbackActions {
+    display: flex;
+    gap: 12px;
+    padding-bottom: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btnPrimary {
+    padding: 12px 28px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btnPrimary:hover {
+    background: var(--primary-bright);
+    box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.btnSecondary {
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+    background: var(--bg-elevated);
+    border-color: var(--primary);
+}
+
+/* ─── Top Bar (active) ───────────────────────────────────────────────────────── */
+.topBar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.btnExit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btnExit:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+.progressWrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.progressTrack {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progressLabel {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.topActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.muteBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.muteBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.mutedActive {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger);
+}
+
+.btnFeedback {
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #000;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    animation: glowPulse 2s ease infinite;
+}
+
+.btnFeedback:hover {
+    background: var(--accent-bright);
+    box-shadow: 0 0 20px var(--accent-glow);
+}
+
+@keyframes glowPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+
+    50% {
+        box-shadow: 0 0 16px var(--accent-glow);
+    }
+}
+
+/* ─── Main Layout ────────────────────────────────────────────────────────────── */
+.mainLayout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ─── Avatar Panel ───────────────────────────────────────────────────────────── */
+.avatarPanel {
+    width: 260px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 20px;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.avatarHeader {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.roundBadge {
+    padding: 4px 14px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: var(--primary-subtle);
+    color: var(--primary-bright);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.avatarLogoBox {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-subtle), var(--bg-elevated));
+    border: 1px solid var(--border-active);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.avatarArea {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    justify-content: center;
+}
+
+.avatarRing {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.speakingRing {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-subtle), 0 0 24px var(--primary-glow);
+    animation: ringPulse 1s ease infinite;
+}
+
+@keyframes ringPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 4px var(--primary-subtle), 0 0 24px var(--primary-glow);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px var(--primary-subtle), 0 0 40px var(--primary-glow);
+    }
+}
+
+.avatarCircle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: color 0.3s;
+}
+
+.speaking {
+    color: var(--primary-bright);
+}
+
+/* Waveform */
+.waveform {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+}
+
+.waveBar {
+    width: 4px;
+    height: 8px;
+    background: var(--primary-bright);
+    border-radius: 2px;
+    animation: wave 0.8s ease-in-out infinite;
+}
+
+@keyframes wave {
+
+    0%,
+    100% {
+        height: 6px;
+        opacity: 0.6;
+    }
+
+    50% {
+        height: 24px;
+        opacity: 1;
+    }
+}
+
+.agentName {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    text-align: center;
+}
+
+.agentStatus {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: center;
+    min-height: 20px;
+}
+
+/* ─── Chat Panel ─────────────────────────────────────────────────────────────── */
+.chatPanel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chatHistory {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.chatBubble {
+    display: flex;
+    gap: 10px;
+    max-width: 80%;
+}
+
+.bubbleAi {
+    align-self: flex-start;
+}
+
+.bubbleUser {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.bubbleAvatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--primary-subtle);
+    border: 1px solid var(--border-active);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-bright);
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.bubbleContent {
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--text-primary);
+}
+
+.bubbleAi .bubbleContent {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+}
+
+.bubbleUser .bubbleContent {
+    background: var(--primary-subtle);
+    border: 1px solid var(--border-active);
+    border-top-right-radius: 4px;
+}
+
+/* Typing indicator */
+.typingIndicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    border-top-left-radius: 4px;
+}
+
+.typingIndicator span {
+    width: 7px;
+    height: 7px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: typingDot 1.2s ease infinite;
+}
+
+.typingIndicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typingIndicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingDot {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+
+    30% {
+        transform: translateY(-6px);
+        opacity: 1;
+    }
+}
+
+/* ─── Input Area ─────────────────────────────────────────────────────────────── */
+.inputArea {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.interviewDoneBanner {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.inputBox {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+}
+
+.inputBox:focus-within {
+    border-color: var(--border-active);
+}
+
+.micBtn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.micBtn:hover {
+    background: var(--primary-subtle);
+    color: var(--primary-bright);
+}
+
+.listening {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+    animation: micPulse 1s ease infinite;
+}
+
+@keyframes micPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.2);
+    }
+}
+
+.micPulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: 12px;
+    border: 2px solid var(--danger);
+    opacity: 0.5;
+    animation: pulseRing 1s ease infinite;
+}
+
+@keyframes pulseRing {
+    0% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
+.textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    resize: none;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.sendBtn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.sendBtn:hover:not(:disabled) {
+    background: var(--primary-bright);
+    box-shadow: 0 0 14px var(--primary-glow);
+}
+
+.sendBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

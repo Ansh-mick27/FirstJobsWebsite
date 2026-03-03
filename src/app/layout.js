@@ -1,20 +1,23 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata = {
-  title: "FirstJobs — Land Your Dream Placement",
-  description: "AI-powered placement preparation platform with company profiles, practice quizzes, interview questions, and previous year papers. Prepare smarter, not harder.",
-  keywords: "placement preparation, campus recruitment, interview questions, aptitude quiz, previous year papers, company profiles",
+  title: "PlacePrep — Land Your Dream Placement",
+  description: "AI-powered placement preparation platform with company profiles, mock tests, interview practice, and previous year questions. Prepare smarter, not harder.",
+  keywords: "placement preparation, campus recruitment, interview questions, mock test, previous year papers, company profiles",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
+        <AuthProvider>
+          <Navbar />
+          <main>{children}</main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

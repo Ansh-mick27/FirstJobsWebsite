@@ -1,0 +1,149 @@
+.card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card:hover {
+    border-color: var(--border-active);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px var(--primary-glow);
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.logoBox {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--primary-subtle);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary-bright);
+}
+
+.tags {
+    display: flex;
+    gap: 8px;
+}
+
+.statusLabel {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+}
+
+.statusLabel.active {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.content {
+    flex-grow: 1;
+}
+
+.name {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.industry {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.rounds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.roundItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.roundDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.roundText {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.prepareText {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-bright);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.arrow {
+    transition: transform 0.2s ease;
+}
+
+.card:hover .arrow {
+    transform: translateX(4px);
+}

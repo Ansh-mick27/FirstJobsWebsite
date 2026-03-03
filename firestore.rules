@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Companies & Questions ───────────────────────────────────────────────
+    // Readable by any authenticated user.
+    // Writes are admin-only (via Firebase Admin SDK — bypasses these rules).
+    match /companies/{companyId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+
+      match /questions/{questionId} {
+        allow read: if request.auth != null;
+        allow write: if false;
+      }
+    }
+
+    // ── Users ───────────────────────────────────────────────────────────────
+    // Each user can only read and write their own data.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /testAttempts/{attemptId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /interviewSessions/{sessionId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

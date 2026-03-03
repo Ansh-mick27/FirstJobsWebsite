@@ -1,0 +1,1184 @@
+/* ─── Container ─────────────────────────────────────────────────────────────── */
+.testContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg-base);
+    overflow: hidden;
+    position: relative;
+}
+
+/* ─── Config Phase ───────────────────────────────────────────────────────────── */
+.configScreen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.btnBack {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 32px;
+    transition: color 0.2s;
+    align-self: flex-start;
+}
+
+.btnBack:hover {
+    color: var(--text-primary);
+}
+
+.configCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px;
+    max-width: 520px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.configHeader {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.configCompanyBadge {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: var(--primary-subtle);
+    border: 1px solid var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--primary-bright);
+}
+
+.configHeader h1 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+}
+
+.configSubtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.configSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.configLabel {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.toggleGroup {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.toggleBtn {
+    flex: 1;
+    padding: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.toggleBtn:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+}
+
+.toggleActive {
+    background: var(--primary-subtle);
+    color: var(--primary-bright);
+    font-weight: 600;
+}
+
+.pillGroup {
+    display: flex;
+    gap: 12px;
+}
+
+.pillBtn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.pillBtn:hover {
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.pillActive {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.configInfo {
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.infoVal {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.btnStartTest {
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: white;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+.btnStartTest:hover {
+    background: var(--primary-bright);
+    box-shadow: 0 0 24px var(--primary-glow);
+    transform: translateY(-1px);
+}
+
+/* ─── Submitting ─────────────────────────────────────────────────────────────── */
+.submittingScreen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.submittingSpinner {
+    width: 56px;
+    height: 56px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ─── Warning Toast ──────────────────────────────────────────────────────────── */
+.warningToast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    padding: 12px 24px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9000;
+    backdrop-filter: blur(8px);
+    font-size: 0.9rem;
+    font-weight: 500;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* ─── Top Bar ────────────────────────────────────────────────────────────────── */
+.topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    height: 72px;
+    flex-shrink: 0;
+}
+
+.companyInfo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.btnExit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.btnExit:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+}
+
+.companyInfo h2 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.roundPill {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--primary-subtle);
+    color: var(--primary-bright);
+}
+
+.timerBox {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.timerText {
+    font-family: var(--font-mono);
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    transition: color 0.5s;
+}
+
+.timerAmber {
+    color: var(--accent) !important;
+    text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.timerRed {
+    color: var(--danger) !important;
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+    animation: pulse 1s ease infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.btnSubmit {
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btnSubmit:hover {
+    background: var(--primary-bright);
+    box-shadow: 0 0 16px var(--primary-glow);
+}
+
+/* ─── Main Layout ────────────────────────────────────────────────────────────── */
+.mainLayout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ─── Left Panel ─────────────────────────────────────────────────────────────── */
+.leftPanel {
+    width: 220px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.leftPanel h3 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.sectionLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    margin-top: 18px;
+}
+
+.qGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.qBox {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    transition: all 0.15s;
+    position: relative;
+    cursor: pointer;
+}
+
+.qBox:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+.answered {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.current {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+    box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 3px var(--accent);
+    animation: qPulse 2s ease infinite;
+}
+
+@keyframes qPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 3px var(--accent);
+    }
+
+    50% {
+        box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 3px var(--accent), 0 0 12px var(--accent-glow);
+    }
+}
+
+.marked {
+    border-color: var(--accent) !important;
+}
+
+.reviewDot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.codingQ {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: var(--info);
+}
+
+.codingQ.answered {
+    background: var(--info);
+    border-color: var(--info);
+    color: white;
+}
+
+.codingQ.current {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+/* ─── Test Area ──────────────────────────────────────────────────────────────── */
+.testArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 32px;
+    overflow-y: auto;
+}
+
+.loadingState {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+/* ─── MCQ ────────────────────────────────────────────────────────────────────── */
+.mcqCard {
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.questionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.qTitle {
+    font-size: 1.2rem;
+    font-family: var(--font-display);
+    color: var(--text-secondary);
+}
+
+.markBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.markBtn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.markActive {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.qText {
+    font-size: 1.125rem;
+    line-height: 1.75;
+    color: var(--text-primary);
+    margin-bottom: 36px;
+    font-family: var(--font-body);
+}
+
+.optionsList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.optionRow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: var(--bg-surface);
+    border: 2px solid var(--border);
+    font-size: 1rem;
+    color: var(--text-primary);
+    text-align: left;
+    transition: all 0.15s;
+    cursor: pointer;
+}
+
+.optionRow:hover {
+    background: var(--primary-subtle);
+    border-color: rgba(124, 58, 237, 0.4);
+    transform: translateX(4px);
+}
+
+.optionLetter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.optionSelected {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+}
+
+.optionSelected .optionLetter {
+    background: var(--primary);
+    color: white;
+}
+
+/* ─── Navigation Bar ─────────────────────────────────────────────────────────── */
+.navigationBar {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 36px;
+    max-width: 760px;
+}
+
+.btnNav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btnNav:not(:disabled):hover {
+    background: var(--bg-elevated);
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.btnNav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ─── Coding Layout ──────────────────────────────────────────────────────────── */
+.codingLayout {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 72px - 56px);
+    overflow: hidden;
+}
+
+.codingProblem {
+    flex: 0 0 42%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.codingProblem h3 {
+    font-size: 1.25rem;
+    margin-bottom: 8px;
+}
+
+.examplesSection {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+}
+
+.examplesSection h4 {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.exampleBox {
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    font-size: 0.875rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--text-secondary);
+}
+
+.exampleBox code {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.exLabel {
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-right: 6px;
+}
+
+.editorArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.editorHeader {
+    padding: 10px 16px;
+    background: #161b22;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+
+.langPills {
+    display: flex;
+    gap: 8px;
+}
+
+.langPill {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    transition: all 0.15s;
+}
+
+.langPill:hover {
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.langActive {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.editorWrapper {
+    flex: 1;
+    overflow: hidden;
+}
+
+.editorFooter {
+    padding: 10px 14px;
+    background: #161b22;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.btnRun,
+.btnSubmitCode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.btnRun {
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--info);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.btnRun:hover:not(:disabled) {
+    background: rgba(56, 189, 248, 0.2);
+}
+
+.btnRun:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btnSubmitCode {
+    background: var(--primary);
+    color: white;
+}
+
+.btnSubmitCode:hover:not(:disabled) {
+    background: var(--primary-bright);
+    box-shadow: 0 0 16px var(--primary-glow);
+}
+
+.btnSubmitCode:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ─── Code Results Panel ─────────────────────────────────────────────────────── */
+.codeResultsPanel {
+    position: absolute;
+    bottom: 52px;
+    left: 0;
+    right: 0;
+    background: #0d1117;
+    border-top: 1px solid var(--border);
+    max-height: 220px;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.resultsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #161b22;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.closeResults {
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.closeResults:hover {
+    color: var(--text-primary);
+}
+
+.testCaseRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 0.8rem;
+}
+
+.tcPass .tcIcon {
+    color: var(--success);
+}
+
+.tcFail .tcIcon {
+    color: var(--danger);
+}
+
+.tcIcon {
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+.tcDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--text-secondary);
+}
+
+.tcDetails code {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
+.tcError {
+    color: var(--danger);
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+}
+
+/* ─── Results Phase ───────────────────────────────────────────────────────────── */
+.resultsScreen {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    padding: 40px 24px;
+}
+
+.resultsCard {
+    max-width: 680px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+}
+
+.scoreRingWrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+}
+
+.scoreRingSvg {
+    transform: rotate(-90deg);
+}
+
+.ringTrack {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 8;
+}
+
+.ringFill {
+    fill: none;
+    stroke: var(--primary);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 0 339.29;
+    animation: fillRing 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    filter: drop-shadow(0 0 8px var(--primary-glow));
+}
+
+@keyframes fillRing {
+    from {
+        stroke-dasharray: 0 339.29;
+    }
+
+    to {
+        stroke-dasharray: var(--fill-dash) var(--circumference);
+    }
+}
+
+.scoreCenter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.scoreNum {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.scorePct {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.perfLabel {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    padding: 8px 24px;
+    border-radius: 999px;
+}
+
+.excellent {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.good {
+    background: var(--primary-subtle);
+    color: var(--primary-bright);
+    border: 1px solid var(--border-active);
+}
+
+.practice {
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.resultsMeta {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 32px;
+    width: 100%;
+    justify-content: center;
+}
+
+.metaItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.metaLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.metaVal {
+    font-family: var(--font-mono);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.metaDivider {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+}
+
+/* ─── Review Section ─────────────────────────────────────────────────────────── */
+.reviewSection {
+    width: 100%;
+}
+
+.reviewSection h3 {
+    font-size: 1rem;
+    font-family: var(--font-display);
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.reviewList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.reviewItem {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.reviewHeader {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    text-align: left;
+    transition: background 0.2s;
+}
+
+.reviewHeader:hover {
+    background: var(--bg-elevated);
+}
+
+.reviewMeta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.iconCorrect {
+    color: var(--success);
+    flex-shrink: 0;
+}
+
+.iconWrong {
+    color: var(--danger);
+    flex-shrink: 0;
+}
+
+.expandIcon {
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.expanded {
+    transform: rotate(90deg);
+}
+
+.reviewBody {
+    border-top: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reviewQuestion {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.reviewOpt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: var(--bg-elevated);
+    position: relative;
+}
+
+.correctOpt {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--success);
+}
+
+.wrongOpt {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+}
+
+.correctBadge {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--success);
+    font-weight: 600;
+}
+
+.wrongBadge {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.reviewExplanation {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    padding: 10px 12px;
+    line-height: 1.6;
+    border-left: 2px solid var(--primary);
+}
+
+/* ─── Results Actions ────────────────────────────────────────────────────────── */
+.resultsActions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-bottom: 32px;
+}
+
+.btnPrimary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btnPrimary:hover {
+    background: var(--primary-bright);
+    box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.btnSecondary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+    background: var(--bg-elevated);
+    border-color: var(--primary);
+}

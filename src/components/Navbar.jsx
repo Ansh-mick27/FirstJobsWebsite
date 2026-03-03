@@ -1,31 +1,53 @@
-'use client';
-import { useState } from 'react';
+"use client";
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Menu, X, Briefcase } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import styles from './Navbar.module.css';
 
-const navLinks = [
+const publicNavLinks = [
     { href: '/', label: 'Home' },
     { href: '/companies', label: 'Companies' },
-    { href: '/quizzes', label: 'Quizzes' },
-    { href: '/interview-prep', label: 'Interview Prep' },
-    { href: '/papers', label: 'Papers' },
 ];
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
     const pathname = usePathname();
+    const router = useRouter();
+    const { user, profile, loading, signOut } = useAuth();
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 20);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const handleSignOut = async () => {
+        try {
+            await signOut();
+            router.push('/');
+        } catch (err) {
+            console.error('Sign out failed:', err);
+        }
+        setIsOpen(false);
+    };
+
+    const displayName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
 
     return (
-        <nav className={styles.navbar}>
+        <nav className={`${styles.navbar} ${scrolled ? styles.scrolled : ''}`}>
             <div className={styles.container}>
                 <Link href="/" className={styles.logo}>
-                    <img src="/logo.png" alt="FirstJobs" className={styles.logoImg} />
+                    <span className={styles.logoAccent}>⚡</span>
+                    <span className={styles.logoText}>PlacePrep</span>
                 </Link>
 
                 <div className={`${styles.navLinks} ${isOpen ? styles.active : ''}`}>
-                    {navLinks.map((link) => (
+                    {publicNavLinks.map((link) => (
                         <Link
                             key={link.href}
                             href={link.href}
@@ -35,10 +57,27 @@ export default function Navbar() {
                             {link.label}
                         </Link>
                     ))}
-                    <Link href="/companies" className={styles.ctaButton} onClick={() => setIsOpen(false)}>
-                        <Briefcase size={16} />
-                        Get Started
-                    </Link>
+
+                    {!loading && user ? (
+                        <>
+                            <Link
+                                href="/dashboard"
+                                className={`${styles.navLink} ${pathname === '/dashboard' ? styles.activeLink : ''}`}
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <LayoutDashboard size={16} />
+                                {displayName}
+                            </Link>
+                            <button className={styles.logoutBtn} onClick={handleSignOut}>
+                                <LogOut size={16} />
+                                Logout
+                            </button>
+                        </>
+                    ) : !loading ? (
+                        <Link href="/login" className={styles.ctaButton} onClick={() => setIsOpen(false)}>
+                            Get Started
+                        </Link>
+                    ) : null}
                 </div>
 
                 <button className={styles.menuBtn} onClick={() => setIsOpen(!isOpen)} aria-label="Toggle menu">

@@ -1,77 +1,47 @@
-import prisma from '@/lib/db';
+import { adminDb } from '@/lib/firebase-admin';
 import { NextResponse } from 'next/server';
-import { generateTestimonials, generateInterviewQuestions } from '@/lib/aiService';
 
+/**
+ * GET /api/companies/[slug]
+ * Returns company data + questions array grouped by round type.
+ * Questions are returned WITHOUT correctAnswer (security — only returned post-submission).
+ */
 export async function GET(request, { params }) {
     try {
         const { slug } = await params;
 
-        const company = await prisma.company.findUnique({
-            where: { slug },
-            include: {
-                testimonials: { orderBy: { createdAt: 'desc' } },
-                interviewQuestions: { orderBy: { difficulty: 'asc' } },
-                papers: { orderBy: { year: 'desc' } },
-            },
-        });
+        // Firestore doesn't support unique-by-field lookups natively — query by slug field
+        const companiesRef = adminDb.collection('companies');
+        const snapshot = await companiesRef.where('slug', '==', slug).limit(1).get();
 
-        if (!company) {
+        if (snapshot.empty) {
             return NextResponse.json({ error: 'Company not found' }, { status: 404 });
         }
 
-        // If no testimonials exist, auto-generate with AI
-        if (company.testimonials.length === 0) {
-            try {
-                const aiTestimonials = await generateTestimonials(company.name);
-                if (aiTestimonials.length > 0) {
-                    const created = await Promise.all(
-                        aiTestimonials.map((t) =>
-                            prisma.testimonial.create({
-                                data: {
-                                    companyId: company.id,
-                                    name: t.name,
-                                    role: t.role,
-                                    content: t.content,
-                                    rating: t.rating || 5,
-                                    isAiGenerated: true,
-                                },
-                            })
-                        )
-                    );
-                    company.testimonials = created;
-                }
-            } catch (aiError) {
-                console.error('AI testimonial generation failed:', aiError);
-            }
-        }
+        const companyDoc = snapshot.docs[0];
+        const company = { id: companyDoc.id, ...companyDoc.data() };
 
-        // If no interview questions, auto-generate
-        if (company.interviewQuestions.length === 0) {
-            try {
-                const aiQuestions = await generateInterviewQuestions(company.name);
-                if (aiQuestions.length > 0) {
-                    const created = await Promise.all(
-                        aiQuestions.map((q) =>
-                            prisma.interviewQuestion.create({
-                                data: {
-                                    companyId: company.id,
-                                    category: q.category || 'Technical',
-                                    question: q.question,
-                                    answer: q.answer,
-                                    difficulty: q.difficulty || 'Medium',
-                                },
-                            })
-                        )
-                    );
-                    company.interviewQuestions = created;
-                }
-            } catch (aiError) {
-                console.error('AI interview question generation failed:', aiError);
-            }
-        }
+        // Fetch all questions in the subcollection
+        const questionsSnapshot = await companyDoc.ref.collection('questions').get();
 
-        return NextResponse.json(company);
+        const questions = questionsSnapshot.docs.map((doc) => {
+            const q = { id: doc.id, ...doc.data() };
+            // Strip correctAnswer — never send to client
+            delete q.correctAnswer;
+            delete q.solution;
+            return q;
+        });
+
+        // Group questions by round
+        const questionsByRound = {
+            oa: questions.filter((q) => q.round === 'oa'),
+            technical: questions.filter((q) => q.round === 'technical'),
+            hr: questions.filter((q) => q.round === 'hr'),
+        };
+
+        return NextResponse.json({ ...company, questions, questionsByRound });
     } catch (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('[GET /api/companies/[slug]]', error);
+        return NextResponse.json({ error: 'Failed to fetch company' }, { status: 500 });
     }
 }

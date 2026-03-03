@@ -1,58 +1,14 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+
 import Link from 'next/link';
-import { ArrowRight, Building2, Brain, FileText, MessageSquare, Sparkles, Users, BookOpen, Trophy, ChevronRight, Star } from 'lucide-react';
+import { ArrowRight, Terminal, BookOpen, BrainCircuit, Target, Code2, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
-import AntigravityCard from '@/components/AntigravityCard';
 import styles from './page.module.css';
 
-function AnimatedCounter({ end, duration = 2000, suffix = '' }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !started.current) {
-        started.current = true;
-        let start = 0;
-        const step = end / (duration / 16);
-        const timer = setInterval(() => {
-          start += step;
-          if (start >= end) {
-            setCount(end);
-            clearInterval(timer);
-          } else {
-            setCount(Math.floor(start));
-          }
-        }, 16);
-      }
-    });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [end, duration]);
-
-  return <span ref={ref}>{count}{suffix}</span>;
-}
-
 const features = [
-  { icon: <Sparkles size={28} />, title: 'AI-Powered Prep', desc: 'Auto-generated quizzes and interview questions using advanced AI.' },
-  { icon: <Building2 size={28} />, title: 'Company Intelligence', desc: 'Deep insights into 500+ companies with employee testimonials.' },
-  { icon: <Brain size={28} />, title: 'Practice Quizzes', desc: 'Aptitude, reasoning, verbal, and coding challenges.' },
-  { icon: <MessageSquare size={28} />, title: 'Interview Bank', desc: 'Company-specific interview questions with detailed answers.' },
-];
-
-const categories = [
-  { name: 'Aptitude', icon: '🧮', color: '#10b981' },
-  { name: 'Logical Reasoning', icon: '🧩', color: '#14b8a6' },
-  { name: 'Verbal Ability', icon: '📝', color: '#06b6d4' },
-  { name: 'Coding & DSA', icon: '💻', color: '#8b5cf6' },
-];
-
-const testimonials = [
-  { name: 'Priya Sharma', role: 'SDE at Google', text: 'FirstJobs helped me crack my dream placement. The AI-generated questions were spot on!', rating: 5 },
-  { name: 'Rahul Kumar', role: 'Analyst at Deloitte', text: 'The company-specific prep materials gave me a huge edge in my interviews.', rating: 5 },
-  { name: 'Ananya Gupta', role: 'Developer at TCS', text: 'Previous year papers and mock tests helped me prepare systematically.', rating: 4 },
+  { icon: <BookOpen size={24} />, title: 'Study Material', desc: 'Curated previous year questions and concepts organized by company and round.' },
+  { icon: <Terminal size={24} />, title: 'Mock Tests', desc: 'Simulated assessments covering OA, technical, and reasoning sections.' },
+  { icon: <BrainCircuit size={24} />, title: 'AI Interview', desc: 'Live voice interviews with an AI agent tailored to the target company.' },
 ];
 
 export default function HomePage() {
@@ -60,164 +16,129 @@ export default function HomePage() {
     <div className={styles.page}>
       {/* Hero Section */}
       <section className={styles.hero}>
-        <div className={styles.heroBg}>
-          <div className={styles.heroGlow1} />
-          <div className={styles.heroGlow2} />
-        </div>
+        <div className={styles.heroBg} />
+
         <div className={styles.heroContent}>
-          <div className={styles.heroBadge}>
-            <Sparkles size={14} />
-            AI-Powered Placement Preparation
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className={styles.heroBadge}>
+              <Target size={14} className={styles.accentIcon} />
+              <span>Level up your career</span>
+            </div>
+
+            <h1 className={styles.heroTitle}>
+              CRACK YOUR <br /> PLACEMENT
+            </h1>
+
+            <p className={styles.heroSubtitle}>
+              Company-specific prep. Real PYQs. AI mock interviews.
+            </p>
+
+            <div className={styles.heroCtas}>
+              <Link href="/companies" className={styles.btnPrimary}>
+                Start Preparing <ArrowRight size={18} />
+              </Link>
+              <Link href="/companies" className={styles.btnSecondary}>
+                Browse Companies
+              </Link>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className={styles.heroStats}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            {[
+              { label: 'Companies', val: '47' },
+              { label: 'Questions', val: '2,400' },
+              { label: 'AI Interviews', val: 'Active' }
+            ].map((stat, i) => (
+              <div key={i} className={styles.statCard}>
+                <span className={styles.statNumber}>{stat.val}</span>
+                <span className={styles.statLabel}>{stat.label}</span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className={styles.howItWorks}>
+        <div className="container">
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>The Playbook</h2>
+            <p className={styles.sectionSubtitle}>Three steps to landing the offer.</p>
           </div>
-          <h1 className={styles.heroTitle}>
-            Land Your <span className={styles.gradientText}>Dream Job</span> with Smart Preparation
-          </h1>
-          <p className={styles.heroSubtitle}>
-            Prepare for campus placements with AI-generated quizzes, company-specific interview prep, previous year papers, and real employee testimonials.
-          </p>
-          <div className={styles.heroCtas}>
-            <Link href="/companies" className={styles.btnPrimary}>
-              Explore Companies <ArrowRight size={18} />
-            </Link>
-            <Link href="/quizzes" className={styles.btnSecondary}>
-              Start Practicing <ChevronRight size={18} />
-            </Link>
-          </div>
-          <div className={styles.heroStats}>
-            <div className={styles.stat}>
-              <span className={styles.statNumber}><AnimatedCounter end={500} suffix="+" /></span>
-              <span className={styles.statLabel}>Companies</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNumber}><AnimatedCounter end={10} suffix="K+" /></span>
-              <span className={styles.statLabel}>Questions</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNumber}><AnimatedCounter end={1} suffix="K+" /></span>
-              <span className={styles.statLabel}>Papers</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNumber}><AnimatedCounter end={50} suffix="K+" /></span>
-              <span className={styles.statLabel}>Students</span>
-            </div>
+
+          <div className={styles.stepsGrid}>
+            {[
+              { num: '01', title: 'Browse Targets', text: 'Select the companies visiting your campus or that you want to apply to off-campus.' },
+              { num: '02', title: 'Practice Rounds', text: 'Solve real previous year questions tailored to their specific hiring patterns.' },
+              { num: '03', title: 'Mock Interview', text: 'Face our AI recruiter to perfect your communication and technical delivery.' }
+            ].map((step, i) => (
+              <motion.div
+                key={i}
+                className={styles.stepCard}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+              >
+                <div className={styles.stepNum}>{step.num}</div>
+                <h3 className={styles.stepTitle}>{step.title}</h3>
+                <p className={styles.stepText}>{step.text}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Feature Highlights */}
       <section className={styles.features}>
         <div className="container">
-          <h2 className="section-title">Why Choose FirstJobs?</h2>
-          <p className="section-subtitle">Everything you need to ace your campus placement, powered by AI.</p>
-          <motion.div
-            className={styles.featuresGrid}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: { staggerChildren: 0.1 }
-              }
-            }}
-          >
+          <div className={styles.featuresGrid}>
             {features.map((f, i) => (
               <motion.div
                 key={i}
-                variants={{
-                  hidden: { opacity: 0, y: 30 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
-                }}
+                className={styles.featureCard}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
               >
-                <AntigravityCard className={styles.featureCard}>
-                  <div className={styles.featureIcon}>{f.icon}</div>
-                  <h3>{f.title}</h3>
-                  <p>{f.desc}</p>
-                </AntigravityCard>
+                <div className={styles.featureIconBox}>
+                  {f.icon}
+                </div>
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+                <div className={styles.cardGlow} />
               </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Quiz Categories */}
-      <section className={styles.quizSection}>
-        <div className="container">
-          <h2 className="section-title">Practice by Category</h2>
-          <p className="section-subtitle">Choose your area and start solving questions.</p>
-          <div className={styles.categoryGrid}>
-            {categories.map((c, i) => (
-              <Link href="/quizzes" key={i} className={styles.categoryCard}>
-                <span className={styles.categoryIcon}>{c.icon}</span>
-                <h3>{c.name}</h3>
-                <span className={styles.categoryArrow}><ArrowRight size={16} /></span>
-              </Link>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className={styles.testimonials}>
-        <div className="container">
-          <h2 className="section-title">Student Success Stories</h2>
-          <p className="section-subtitle">Hear from students who landed their dream placements.</p>
-          <motion.div
-            className={styles.testimonialGrid}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: { staggerChildren: 0.15 }
-              }
-            }}
-          >
-            {testimonials.map((t, i) => (
-              <motion.div
-                key={i}
-                variants={{
-                  hidden: { opacity: 0, y: 30 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
-                }}
-                style={{ height: '100%' }}
-              >
-                <AntigravityCard className={styles.testimonialCard}>
-                  <div className={styles.testimonialStars}>
-                    {[...Array(t.rating)].map((_, j) => <Star key={j} size={16} fill="#f59e0b" color="#f59e0b" />)}
-                  </div>
-                  <p className={styles.testimonialText}>"{t.text}"</p>
-                  <div className={styles.testimonialAuthor}>
-                    <div className={styles.testimonialAvatar}>{t.name[0]}</div>
-                    <div>
-                      <strong>{t.name}</strong>
-                      <span>{t.role}</span>
-                    </div>
-                  </div>
-                </AntigravityCard>
-              </motion.div>
-            ))}
-          </motion.div>
         </div>
       </section>
 
       {/* CTA Banner */}
       <section className={styles.cta}>
         <div className="container">
-          <div className={styles.ctaInner}>
-            <Trophy size={48} className={styles.ctaIcon} />
-            <h2>Ready to Start Your Placement Journey?</h2>
-            <p>Join thousands of students who are preparing smarter with AI. </p>
+          <motion.div
+            className={styles.ctaInner}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2>Ready to play?</h2>
+            <p>Select your target company and start leveling up your skills.</p>
             <Link href="/companies" className={styles.btnCta}>
-              Get Started Now <ArrowRight size={18} />
+              Select Target <ArrowRight size={18} />
             </Link>
-          </div>
+          </motion.div>
         </div>
       </section>
     </div>
