@@ -36,8 +36,9 @@
 }
 
 .logoAccent {
-    color: var(--accent);
-    font-size: 1.4rem;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
 }
 
 .description {

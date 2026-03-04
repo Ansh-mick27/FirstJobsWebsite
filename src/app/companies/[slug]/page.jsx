@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, BrainCircuit, Terminal, BookOpen, Clock, LayoutList, ChevronLeft, Loader2 } from 'lucide-react';
-import QuestionItem from '@/components/QuestionItem';
+import StudyMaterial from '@/components/StudyMaterial';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
 
@@ -23,6 +23,11 @@ export default function CompanyDetail() {
     const [company, setCompany] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    // Scroll to top on page load
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }, []);
 
     // Fetch company data from API
     useEffect(() => {
@@ -86,13 +91,15 @@ export default function CompanyDetail() {
     return (
         <div className={styles.page}>
             <div className="container">
-                {/* Hero Banner */}
+                {/* Back button — above banner */}
+                <button className={styles.btnBack} onClick={() => router.back()}>
+                    <ChevronLeft size={14} /> Back to Companies
+                </button>
+
+                {/* Compact Hero Banner */}
                 <div className={styles.heroBanner}>
                     <div className={styles.heroGlow} />
                     <div className={styles.heroContent}>
-                        <button className={styles.btnBack} onClick={() => router.back()}>
-                            <ChevronLeft size={18} /> Back
-                        </button>
                         <div className={styles.logoBox}>
                             {company.name?.charAt(0) || '?'}
                         </div>
@@ -147,21 +154,10 @@ export default function CompanyDetail() {
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
                             >
-                                <div className={styles.topicHeader}>
-                                    <h3>Top Questions for {company.name}</h3>
-                                    <p>Real interview questions — handle with care.</p>
-                                </div>
-                                {allQuestions.length === 0 ? (
-                                    <div className={styles.emptyQuestions}>
-                                        <p>No study questions added yet for this company.</p>
-                                    </div>
-                                ) : (
-                                    <div className={styles.questionList}>
-                                        {allQuestions.map(q => (
-                                            <QuestionItem key={q.id} question={q} userEmail={userEmail} />
-                                        ))}
-                                    </div>
-                                )}
+                                <StudyMaterial
+                                    slug={slug}
+                                    companyName={company.name}
+                                />
                             </motion.div>
                         )}
 

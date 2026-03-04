@@ -19,7 +19,8 @@ const formatTime = (secs) => {
 
 const LANGUAGES = ['javascript', 'python', 'cpp', 'java'];
 const LANG_LABELS = { javascript: 'JavaScript', python: 'Python 3', cpp: 'C++17', java: 'Java' };
-const PISTON_LANG = { javascript: 'javascript', python: 'python', cpp: 'c++', java: 'java' };
+// Maps UI language key → what we send to /api/execute (which handles Piston mapping internally)
+const PISTON_LANG = { javascript: 'javascript', python: 'python', cpp: 'cpp', java: 'java' };
 
 const STARTER_CODE = {
     javascript: '// Write your code here\nfunction solution() {\n  \n}\n',
@@ -181,9 +182,15 @@ export default function MockTest() {
             let qs = [];
             if (res.ok) qs = await res.json();
 
-            // If no questions from DB, use built-in sample questions
             if (!qs || qs.length === 0) {
+                // No DB questions — use full sample set
                 qs = getSampleQuestions(roundType, numQuestions);
+            } else if (qs.length < numQuestions) {
+                // Pad with sample questions to reach requested count
+                const samples = getSampleQuestions(roundType, numQuestions);
+                const existingIds = new Set(qs.map(q => q.id));
+                const extras = samples.filter(q => !existingIds.has(q.id));
+                qs = [...qs, ...extras].slice(0, numQuestions);
             } else {
                 qs = qs.slice(0, numQuestions);
             }
@@ -235,8 +242,20 @@ export default function MockTest() {
                 const allPassed = data.results?.every(r => r.passed);
                 setAnswers(prev => ({ ...prev, [q.id]: allPassed ? 'passed' : 'attempted' }));
             }
-        } catch {
-            setCodeResults(prev => ({ ...prev, [q.id]: [{ passed: false, input: '', expected: '', actual: 'Execution failed', stderr: 'Network error' }] }));
+        } catch (err) {
+            const errMsg = err?.message || 'Unknown error';
+            setCodeResults(prev => ({
+                ...prev,
+                [q.id]: [{
+                    passed: false,
+                    input: '',
+                    expected: '',
+                    actual: '',
+                    stderr: errMsg.includes('timeout') || errMsg.includes('abort')
+                        ? '⏱ Execution timed out. The code runner is busy — please try again in a moment.'
+                        : `Execution failed: ${errMsg}`,
+                }],
+            }));
         }
         setIsRunning(false);
     }
@@ -459,7 +478,12 @@ export default function MockTest() {
             <div className={styles.mainLayout}>
                 {/* Left Navigator Panel */}
                 <div className={styles.leftPanel}>
-                    <h3>Overview</h3>
+                    <div className={styles.panelHeader}>
+                        <span className={styles.panelTitle}>Questions</span>
+                        <span className={styles.panelProgress}>
+                            {Object.keys(answers).length}/{questions.length}
+                        </span>
+                    </div>
 
                     {mcqQuestions.length > 0 && (
                         <>
@@ -506,6 +530,26 @@ export default function MockTest() {
                             </div>
                         </>
                     )}
+
+                    {/* Status Legend */}
+                    <div className={styles.legend}>
+                        <div className={styles.legendItem}>
+                            <span className={`${styles.legendDot} ${styles.legendAnswered}`} />
+                            <span>Answered</span>
+                        </div>
+                        <div className={styles.legendItem}>
+                            <span className={`${styles.legendDot} ${styles.legendCurrent}`} />
+                            <span>Current</span>
+                        </div>
+                        <div className={styles.legendItem}>
+                            <span className={`${styles.legendDot} ${styles.legendMarked}`} />
+                            <span>Marked</span>
+                        </div>
+                        <div className={styles.legendItem}>
+                            <span className={`${styles.legendDot} ${styles.legendUnanswered}`} />
+                            <span>Not answered</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Test Area */}

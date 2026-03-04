@@ -1,16 +1,28 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Github, Linkedin, Twitter, Mail } from 'lucide-react';
+import { Github, Linkedin, Twitter, Mail, Infinity as InfinityIcon } from 'lucide-react';
 import styles from './Footer.module.css';
 
+// Paths where the footer should be hidden (immersive full-screen experiences)
+const HIDDEN_ON = ['/test/', '/interview/', '/companies/'];
+
 export default function Footer() {
+    const pathname = usePathname();
+
+    // Hide footer on all immersive pages (test engine, AI interview)
+    const isHidden = pathname === '/' || HIDDEN_ON.some(prefix => pathname?.startsWith(prefix));
+    if (isHidden) return null;
+
     return (
         <footer className={styles.footer}>
             <div className={styles.container}>
                 <div className={styles.grid}>
                     <div className={styles.brand}>
                         <Link href="/" className={styles.logo}>
-                            <span className={styles.logoAccent}>⚡</span>
-                            <span className={styles.logoText}>PlacePrep</span>
+                            <InfinityIcon size={22} className={styles.logoAccent} />
+                            <span className={styles.logoText}>Paradox</span>
                         </Link>
                         <p className={styles.description}>
                             Level up your career with company-specific prep, real PYQs, and AI-powered mock interviews. Prepare smarter, not harder.
@@ -45,7 +57,7 @@ export default function Footer() {
                 </div>
 
                 <div className={styles.bottom}>
-                    <p>&copy; {new Date().getFullYear()} PlacePrep. All rights reserved.</p>
+                    <p>&copy; {new Date().getFullYear()} Paradox. All rights reserved.</p>
                 </div>
             </div>
         </footer>

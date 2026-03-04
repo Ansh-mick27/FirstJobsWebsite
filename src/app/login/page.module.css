@@ -56,8 +56,10 @@
 }
 
 .logoAccent {
-    color: var(--accent);
+    color: var(--primary);
     font-size: 1.8rem;
+    display: flex;
+    align-items: center;
 }
 
 .authCard {
@@ -178,7 +180,7 @@
     padding: 16px;
     margin-top: 8px;
     border-radius: 12px;
-    background: var(--primary);
+    background: linear-gradient(180deg, var(--primary) 0%, #D0103A 100%);
     color: white;
     font-family: var(--font-body);
     font-size: 1rem;
@@ -188,9 +190,8 @@
 }
 
 .submitBtn:hover:not(:disabled) {
-    background: var(--primary-bright);
     transform: translateY(-2px);
-    box-shadow: 0 4px 25px rgba(124, 58, 237, 0.4);
+    box-shadow: 0 4px 25px var(--primary-glow);
 }
 
 .submitBtn:disabled {
@@ -206,7 +207,7 @@
 }
 
 .authFooter a {
-    color: var(--primary-bright);
+    color: var(--primary);
     font-weight: 600;
     margin-left: 4px;
 }

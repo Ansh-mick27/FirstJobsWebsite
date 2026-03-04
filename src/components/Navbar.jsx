@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Infinity as InfinityIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import styles from './Navbar.module.css';
 
@@ -38,12 +38,16 @@ export default function Navbar() {
 
     const displayName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
 
+    const HIDDEN_ON = ['/test/', '/interview/'];
+    const isHidden = pathname === '/' || HIDDEN_ON.some(p => pathname.startsWith(p));
+    if (isHidden) return null;
+
     return (
         <nav className={`${styles.navbar} ${scrolled ? styles.scrolled : ''}`}>
             <div className={styles.container}>
                 <Link href="/" className={styles.logo}>
-                    <span className={styles.logoAccent}>⚡</span>
-                    <span className={styles.logoText}>PlacePrep</span>
+                    <InfinityIcon size={28} className={styles.logoAccent} />
+                    <span className={styles.logoText}>Paradox</span>
                 </Link>
 
                 <div className={`${styles.navLinks} ${isOpen ? styles.active : ''}`}>

@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata = {
-  title: "PlacePrep — Land Your Dream Placement",
+  title: "Paradox",
   description: "AI-powered placement preparation platform with company profiles, mock tests, interview practice, and previous year questions. Prepare smarter, not harder.",
   keywords: "placement preparation, campus recruitment, interview questions, mock test, previous year papers, company profiles",
 };

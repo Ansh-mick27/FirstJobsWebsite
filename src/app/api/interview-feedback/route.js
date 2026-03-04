@@ -6,11 +6,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 /**
  * POST /api/interview-feedback
- * Body: { sessionId, userId, messages }
- *
- * Generates structured AI feedback for a completed interview session
- * and saves it to /users/{userId}/interviewSessions/{sessionId}.
- *
+ * Body: { sessionId, userId, messages, roundType, companyName }
  * Returns: { feedback: AIFeedback }
  */
 export async function POST(request) {
@@ -21,19 +17,27 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { sessionId, userId, messages } = body;
+    const { sessionId, userId, messages, roundType = 'technical', companyName = 'the company' } = body;
 
-    if (!sessionId || !userId || !messages?.length) {
-        return NextResponse.json(
-            { error: 'sessionId, userId, and messages are required' },
-            { status: 400 }
-        );
+    if (!messages?.length) {
+        return NextResponse.json({ error: 'messages are required' }, { status: 400 });
     }
 
-    // Build a readable transcript for the AI
+    // Build a clean readable transcript
+    const qaExchanges = [];
+    let currentQ = null;
+    for (const m of messages.filter(m => m.role !== 'system')) {
+        if (m.role === 'assistant') {
+            currentQ = m.content;
+        } else if (m.role === 'user' && currentQ) {
+            qaExchanges.push({ question: currentQ, answer: m.content });
+            currentQ = null;
+        }
+    }
+
     const transcript = messages
-        .filter((m) => m.role !== 'system')
-        .map((m) => `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content}`)
+        .filter(m => m.role !== 'system')
+        .map(m => `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content}`)
         .join('\n');
 
     try {
@@ -41,25 +45,34 @@ export async function POST(request) {
             messages: [
                 {
                     role: 'system',
-                    content: `You are an expert interview coach reviewing a campus placement interview transcript.
-Analyze the candidate's performance and return a structured JSON feedback object with exactly these fields:
+                    content: `You are an expert interview coach reviewing a ${roundType} round campus placement interview at ${companyName}.
+Analyze the candidate's performance and return a structured JSON feedback object with EXACTLY these fields:
 {
-  "score": <number 1-10>,
-  "strengths": [<string>, ...],
-  "weaknesses": [<string>, ...],
-  "suggestions": [<string>, ...],
-  "overallSummary": "<2-3 sentence summary>"
+  "score": <integer 1-10>,
+  "hiringDecision": <"Strong Yes" | "Yes" | "Maybe" | "No">,
+  "overallSummary": "<2-3 sentence honest, specific summary>",
+  "strengths": ["<specific strength>", ...],
+  "weaknesses": ["<specific area to improve>", ...],
+  "suggestions": ["<specific actionable advice>", ...],
+  "questionBreakdown": [
+    { "question": "<interviewer question>", "rating": <1-5>, "comment": "<one sentence feedback on the answer>" },
+    ...
+  ]
 }
-Be specific, constructive, and actionable. Return ONLY valid JSON, no markdown.`,
+Rules:
+- questionBreakdown must cover every question-answer pair in the transcript.
+- Be specific and reference the candidate's actual answers, not generic advice.
+- hiringDecision: "Strong Yes" = 9-10, "Yes" = 7-8, "Maybe" = 5-6, "No" = 1-4.
+- Return ONLY valid JSON, no markdown, no explanation.`,
                 },
                 {
                     role: 'user',
-                    content: `Here is the interview transcript:\n\n${transcript}\n\nProvide detailed feedback.`,
+                    content: `Interview transcript:\n\n${transcript}\n\nProvide detailed structured feedback.`,
                 },
             ],
             model: 'llama-3.3-70b-versatile',
-            temperature: 0.5,
-            max_tokens: 1000,
+            temperature: 0.4,
+            max_tokens: 1500,
             response_format: { type: 'json_object' },
         });
 
@@ -70,18 +83,23 @@ Be specific, constructive, and actionable. Return ONLY valid JSON, no markdown.`
             return NextResponse.json({ error: 'AI returned invalid JSON feedback' }, { status: 502 });
         }
 
-        // Save feedback + mark session complete in Firestore
-        const sessionRef = adminDb
-            .collection('users')
-            .doc(userId)
-            .collection('interviewSessions')
-            .doc(sessionId);
-
-        await sessionRef.update({
-            aiFeedback: feedback,
-            isComplete: true,
-            completedAt: new Date(),
-        });
+        // Persist to Firestore if we have identifiers
+        if (userId && sessionId && sessionId !== 'local') {
+            try {
+                const sessionRef = adminDb
+                    .collection('users')
+                    .doc(userId)
+                    .collection('interviewSessions')
+                    .doc(sessionId);
+                await sessionRef.update({
+                    aiFeedback: feedback,
+                    isComplete: true,
+                    completedAt: new Date(),
+                });
+            } catch (firestoreErr) {
+                console.warn('[interview-feedback] Firestore update failed:', firestoreErr.message);
+            }
+        }
 
         return NextResponse.json({ feedback });
     } catch (error) {

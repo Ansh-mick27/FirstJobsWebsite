@@ -1,0 +1,441 @@
+/* ─── Root ─────────────────────────────────────────────────────────────────── */
+.root {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-bottom: 64px;
+}
+
+/* ─── Overview Card ─────────────────────────────────────────────────────────── */
+.overviewCard {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 28px;
+    flex-wrap: wrap;
+}
+
+.overviewLeft {
+    flex: 1;
+    min-width: 240px;
+}
+
+.overviewLabel {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.overviewText {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.75;
+}
+
+.overviewStats {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.oStatDiv {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+}
+
+.oStat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.oNum {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.oRed {
+    color: var(--danger);
+}
+
+.oAmber {
+    color: var(--accent);
+}
+
+.oLbl {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+/* ─── Legend ────────────────────────────────────────────────────────────────── */
+.legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legendDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legendLabel {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.legendHint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* ─── Filter Bar ─────────────────────────────────────────────────────────────── */
+.filterBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filterIcon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.filterPill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+}
+
+.filterPill:hover {
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.filterActive {
+    background: var(--primary-subtle);
+    border-color: var(--primary) !important;
+    color: var(--primary-bright) !important;
+    font-weight: 600;
+}
+
+.filterCount {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.expandAllBtn {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-bright);
+    transition: opacity 0.2s;
+}
+
+.expandAllBtn:hover {
+    opacity: 0.8;
+}
+
+/* ─── Topic List ─────────────────────────────────────────────────────────────── */
+.topicList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ─── Topic Card ─────────────────────────────────────────────────────────────── */
+.topicCard {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.topicCard:hover {
+    border-color: var(--border-active);
+}
+
+
+
+
+.topicHeader {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    gap: 14px;
+    transition: background 0.15s;
+}
+
+.topicHeader:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.topicLeft {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.topicIcon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.topicInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.topicName {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+}
+
+.topicMeta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.subtopicCount {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.mustCount {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.topicRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.hourBadge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.chevron {
+    color: var(--text-muted);
+}
+
+/* ─── Badge ──────────────────────────────────────────────────────────────────── */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.badgeLg {
+    font-size: 0.75rem;
+    padding: 4px 12px;
+}
+
+/* ─── Subtopics Container ────────────────────────────────────────────────────── */
+.subtopicsContainer {
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+}
+
+/* ─── Subtopic Row ───────────────────────────────────────────────────────────── */
+.subtopicRow {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: background 0.12s;
+}
+
+.subtopicRow:last-child {
+    border-bottom: none;
+}
+
+.subtopicRow:hover {
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.subtopicMain {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 22px;
+}
+
+.importanceDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.subtopicName {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.subtopicRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.noteBtn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    padding: 3px 9px;
+    border-radius: 999px;
+    transition: all 0.15s;
+}
+
+.noteBtn:hover {
+    background: rgba(245, 158, 11, 0.15);
+}
+
+.notePill {
+    margin: 0 22px 12px calc(22px + 8px + 12px);
+    padding: 10px 14px;
+    background: rgba(245, 158, 11, 0.07);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    overflow: hidden;
+}
+
+/* ─── No Syllabus / Empty States ─────────────────────────────────────────────── */
+.noSyllabus {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 64px 32px;
+    text-align: center;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border);
+    border-radius: 20px;
+}
+
+.emptyIcon {
+    color: var(--text-muted);
+}
+
+.noSyllabus h3 {
+    font-size: 1.2rem;
+    font-family: var(--font-display);
+}
+
+.noSyllabus p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    max-width: 360px;
+    line-height: 1.7;
+}
+
+.emptyFilter {
+    padding: 32px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* ─── Last Updated ───────────────────────────────────────────────────────────── */
+.lastUpdated {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding-top: 8px;
+}

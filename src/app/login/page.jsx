@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react';
+import { ArrowRight, Mail, Lock, AlertCircle, Infinity as InfinityIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
 
@@ -46,14 +46,14 @@ export default function LoginPage() {
             <div className={styles.authContainer}>
                 <div className={styles.logoWrapper}>
                     <Link href="/" className={styles.logo}>
-                        <span className={styles.logoAccent}>⚡</span>
-                        <span className={styles.logoText}>PlacePrep</span>
+                        <InfinityIcon size={28} className={styles.logoAccent} />
+                        <span className={styles.logoText}>Paradox</span>
                     </Link>
                 </div>
 
                 <div className={styles.authCard}>
-                    <h2>Welcome back player</h2>
-                    <p>Enter your credentials to access your dashboard.</p>
+                    <h2>Welcome back</h2>
+                    <p>Sign in to access your Paradox dashboard.</p>
 
                     <form onSubmit={handleLogin} className={styles.form}>
                         {error && (

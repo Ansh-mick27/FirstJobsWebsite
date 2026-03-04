@@ -1,22 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Base — near black with a hint of navy */
-  --bg-base: #080B14;
-  --bg-surface: #0D1220;
-  --bg-elevated: #131929;
-  --bg-overlay: #1A2235;
+  /* Base — Paradox void */
+  --bg-base: #03040A;
+  --bg-surface: #080D1A;
+  --bg-elevated: #0F1628;
+  --bg-overlay: #131929;
 
-  /* Primary — electric violet (NOT green, NOT blue) */
-  --primary: #7C3AED;
-  --primary-bright: #8B5CF6;
-  --primary-glow: rgba(124, 58, 237, 0.4);
-  --primary-subtle: rgba(124, 58, 237, 0.12);
+  /* Primary — Paradox Crimson */
+  --primary: #FF2D55;
+  --primary-bright: #FF5577;
+  --primary-glow: rgba(255, 45, 85, 0.4);
+  --primary-subtle: rgba(255, 45, 85, 0.1);
 
-  /* Accent — neon amber/gold for CTAs and highlights */
-  --accent: #F59E0B;
-  --accent-bright: #FCD34D;
-  --accent-glow: rgba(245, 158, 11, 0.35);
+  /* Accent — same crimson for consistency */
+  --accent: #FF2D55;
+  --accent-bright: #FF5577;
+  --accent-glow: rgba(255, 45, 85, 0.35);
 
   /* Status colors */
   --success: #10B981;
@@ -24,13 +24,13 @@
   --info: #38BDF8;
 
   /* Text */
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted: #475569;
+  --text-primary: #F0F4FF;
+  --text-secondary: rgba(240, 244, 255, 0.75);
+  --text-muted: rgba(240, 244, 255, 0.35);
 
   /* Borders */
-  --border: rgba(255,255,255,0.06);
-  --border-active: rgba(124, 58, 237, 0.5);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-active: rgba(255, 45, 85, 0.5);
 
   /* Fonts */
   --font-display: 'Syne', sans-serif;
@@ -41,6 +41,7 @@
   --container-max: 1280px;
   --container-padding: 1.5rem;
 }
+
 
 /* Reset */
 *,
@@ -78,23 +79,36 @@ body::after {
   opacity: 0.4;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { 
-  width: 6px; 
+/* Hide scrollbars everywhere — keep scroll functionality */
+html {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
 }
-::-webkit-scrollbar-track { 
-  background: var(--bg-base); 
+
+html::-webkit-scrollbar {
+  display: none;
 }
-::-webkit-scrollbar-thumb { 
-  background: var(--primary); 
-  border-radius: 3px; 
+
+/* Chrome/Safari/Opera */
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-::-webkit-scrollbar-thumb:hover { 
-  background: var(--primary-bright); 
+
+*::-webkit-scrollbar {
+  display: none;
 }
 
 /* Typography Base */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
   line-height: 1.2;
   font-weight: 700;
@@ -119,13 +133,17 @@ button {
   font-family: inherit;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
   font-size: inherit;
 }
 
 /* Form inputs global style */
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--border-active);
   box-shadow: 0 0 0 1px var(--border-active);

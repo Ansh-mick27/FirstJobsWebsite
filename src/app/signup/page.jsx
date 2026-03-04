@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Mail, Lock, AlertCircle, User, Hash } from 'lucide-react';
+import { ArrowRight, Mail, Lock, AlertCircle, User, Hash, Infinity as InfinityIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import styles from '../login/page.module.css';
 
@@ -61,8 +61,8 @@ export default function SignupPage() {
             <div className={styles.authContainer}>
                 <div className={styles.logoWrapper}>
                     <Link href="/" className={styles.logo}>
-                        <span className={styles.logoAccent}>⚡</span>
-                        <span className={styles.logoText}>PlacePrep</span>
+                        <InfinityIcon size={28} className={styles.logoAccent} />
+                        <span className={styles.logoText}>Paradox</span>
                     </Link>
                 </div>
 

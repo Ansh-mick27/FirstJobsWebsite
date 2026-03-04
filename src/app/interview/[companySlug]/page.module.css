@@ -14,8 +14,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px;
-    overflow-y: auto;
+    padding: 16px 24px;
+    overflow: hidden;
 }
 
 .btnBackConfig {
@@ -37,12 +37,12 @@
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 20px;
-    padding: 48px;
+    padding: 28px 36px;
     max-width: 500px;
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
 }
 
 .configHeader {
@@ -54,9 +54,9 @@
 }
 
 .configAvatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
     background: var(--primary-subtle);
     border: 1px solid var(--primary);
     display: flex;
@@ -67,7 +67,7 @@
 
 .configHeader h1 {
     font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-size: 1.4rem;
 }
 
 .configSubtitle {
@@ -161,12 +161,12 @@
 }
 
 .btnStartInterview {
-    padding: 16px;
+    padding: 13px;
     border-radius: 12px;
     background: var(--primary);
     color: white;
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     transition: all 0.2s;
 }
@@ -592,35 +592,7 @@
     color: var(--primary-bright);
 }
 
-/* Waveform */
-.waveform {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    height: 32px;
-}
-
-.waveBar {
-    width: 4px;
-    height: 8px;
-    background: var(--primary-bright);
-    border-radius: 2px;
-    animation: wave 0.8s ease-in-out infinite;
-}
-
-@keyframes wave {
-
-    0%,
-    100% {
-        height: 6px;
-        opacity: 0.6;
-    }
-
-    50% {
-        height: 24px;
-        opacity: 1;
-    }
-}
+/* waveform styles moved to bottom of file — see .waveBar / .waveBarActive */
 
 .agentName {
     font-family: var(--font-display);
@@ -874,4 +846,220 @@
 .sendBtn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+/* ─── Round Grid (config) ────────────────────────────────────────────────────── */
+.roundGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.roundCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.roundCard:hover {
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+}
+
+.roundCardActive {
+    border-color: var(--primary);
+    background: var(--primary-subtle);
+    box-shadow: 0 0 12px var(--primary-glow);
+}
+
+.roundCardLabel {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+}
+
+.roundCardActive .roundCardLabel {
+    color: var(--primary-bright);
+}
+
+.roundCardDesc {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+/* ─── Timer Badge (top bar) ──────────────────────────────────────────────────── */
+.timerBadge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+
+/* ─── End Early Button ───────────────────────────────────────────────────────── */
+.btnEndEarly {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger, #ef4444);
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btnEndEarly:hover {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ─── Company Name Label (avatar panel) ──────────────────────────────────────── */
+.companyNameLabel {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-align: center;
+    font-weight: 500;
+}
+
+/* ─── Avatar outer wrapper ───────────────────────────────────────────────────── */
+.avatarOuter {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ─── Waveform — idle and active states ──────────────────────────────────────── */
+.waveBar {
+    width: 4px;
+    border-radius: 2px;
+    background: var(--text-muted);
+    height: 6px;
+    opacity: 0.3;
+    transition: background 0.3s;
+}
+
+.waveBarActive {
+    background: var(--primary-bright);
+    opacity: 1;
+    animation: wave 0.8s ease-in-out infinite;
+}
+
+/* ─── Hiring Decision Badge ──────────────────────────────────────────────────── */
+.hiringBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* ─── Q&A Breakdown Cards ────────────────────────────────────────────────────── */
+.qaCard {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.qaCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 16px;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.qaCardHeader:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.qaCardLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+.qaNum {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary-bright);
+    background: var(--primary-subtle);
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.qaQuestion {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.qaCardRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.ratingDots {
+    display: flex;
+    gap: 4px;
+}
+
+.ratingDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+}
+
+.ratingDotFilled {
+    background: var(--primary-bright);
+}
+
+.qaCardBody {
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+}
+
+.qaComment {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
 }

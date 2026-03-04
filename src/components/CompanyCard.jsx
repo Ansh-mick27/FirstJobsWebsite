@@ -21,8 +21,8 @@ export default function CompanyCard({ company }) {
                     {initialLetter}
                 </div>
                 <div className={styles.tags}>
-                    <span className={`${styles.statusLabel} ${data.status === 'Active' ? styles.active : ''}`}>
-                        {data.status}
+                    <span className={`${styles.statusLabel} ${data.hiringStatus === 'Active' ? styles.active : ''}`}>
+                        {data.hiringStatus || 'Active'}
                     </span>
                 </div>
             </div>
@@ -32,12 +32,14 @@ export default function CompanyCard({ company }) {
                 <p className={styles.industry}>{data.industry}</p>
 
                 <div className={styles.rounds}>
-                    {data.rounds.map((round) => (
-                        <div key={round} className={styles.roundItem} title={round}>
-                            <div className={styles.roundDot}></div>
-                            <span className={styles.roundText}>{round}</span>
-                        </div>
-                    ))}
+                    {data.rounds && Object.entries(data.rounds)
+                        .filter(([, enabled]) => enabled)
+                        .map(([round]) => (
+                            <div key={round} className={styles.roundItem} title={round}>
+                                <div className={styles.roundDot}></div>
+                                <span className={styles.roundText}>{round.toUpperCase()}</span>
+                            </div>
+                        ))}
                 </div>
             </div>
 
