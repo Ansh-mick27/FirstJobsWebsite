@@ -1,11 +1,11 @@
 'use client';
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 /**
- * ProtectedRoute — redirects unauthenticated users to /login.
- * Use this to wrap any page that requires sign-in.
+ * ProtectedRoute — redirects unauthenticated users to /login?next=<current-path>.
+ * After login the user is sent back to the page they were trying to access.
  *
  * @example
  * export default function DashboardPage() {
@@ -15,12 +15,13 @@ import { useAuth } from '@/context/AuthContext';
 export default function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
         if (!loading && !user) {
-            router.push('/login');
+            router.push(`/login?next=${encodeURIComponent(pathname)}`);
         }
-    }, [user, loading, router]);
+    }, [user, loading, router, pathname]);
 
     if (loading) {
         return (

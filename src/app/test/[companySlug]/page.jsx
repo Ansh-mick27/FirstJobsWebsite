@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+
 import { Play, Send, ChevronRight, ChevronLeft, X, Bookmark, AlertTriangle, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
@@ -39,8 +41,17 @@ const getPerformanceLabel = (pct) => {
 export default function MockTest() {
     const params = useParams();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const companySlug = params?.companySlug || 'company';
+    const searchParams = useSearchParams();
+    const roleId = searchParams?.get('roleId') || '';
+
+    // Auth guard
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push(`/login?next=${encodeURIComponent(`/test/${companySlug}`)}`);
+        }
+    }, [authLoading, user, router, companySlug]);
 
     // ── Phases & Questions ──
     const [phase, setPhase] = useState('config'); // 'config' | 'active' | 'submitting' | 'results'
@@ -91,6 +102,22 @@ export default function MockTest() {
         }
         fetchCompany();
     }, [companySlug]);
+
+    // Derive allowed test round types from the selected role (if any) — stable via useMemo
+    const allowedTestRounds = useMemo(() => {
+        if (!roleId || !company?.roles) return ['oa', 'technical'];
+        const role = company.roles.find(r => r.id === roleId);
+        if (!role?.roundTypes) return ['oa', 'technical'];
+        const testRounds = role.roundTypes.filter(rt => rt === 'oa' || rt === 'technical');
+        return testRounds.length > 0 ? testRounds : ['oa', 'technical'];
+    }, [roleId, company?.roles]);
+
+    // Auto-select the first allowed round type if current one isn't in the list
+    useEffect(() => {
+        if (!allowedTestRounds.includes(roundType)) {
+            setRoundType(allowedTestRounds[0]);
+        }
+    }, [allowedTestRounds, roundType]);
 
     // ─── Submit handler (stable ref so timer effect can call it) ──────────────
     const handleSubmit = useCallback(async () => {
@@ -178,7 +205,8 @@ export default function MockTest() {
 
     async function startTest() {
         try {
-            const res = await fetch(`/api/questions?companyId=${company?.id || companySlug}&round=${roundType}&limit=${numQuestions}`);
+            const qUrl = `/api/questions?companyId=${company?.id || companySlug}&round=${roundType}&limit=${numQuestions}${roleId ? `&roleId=${roleId}` : ''}`;
+            const res = await fetch(qUrl);
             let qs = [];
             if (res.ok) qs = await res.json();
 
@@ -293,18 +321,22 @@ export default function MockTest() {
                         <div className={styles.configSection}>
                             <label className={styles.configLabel}>Round Type</label>
                             <div className={styles.toggleGroup}>
-                                <button
-                                    className={`${styles.toggleBtn} ${roundType === 'oa' ? styles.toggleActive : ''}`}
-                                    onClick={() => setRoundType('oa')}
-                                >
-                                    Online Assessment
-                                </button>
-                                <button
-                                    className={`${styles.toggleBtn} ${roundType === 'technical' ? styles.toggleActive : ''}`}
-                                    onClick={() => setRoundType('technical')}
-                                >
-                                    Technical Round
-                                </button>
+                                {allowedTestRounds.includes('oa') && (
+                                    <button
+                                        className={`${styles.toggleBtn} ${roundType === 'oa' ? styles.toggleActive : ''}`}
+                                        onClick={() => setRoundType('oa')}
+                                    >
+                                        Online Assessment
+                                    </button>
+                                )}
+                                {allowedTestRounds.includes('technical') && (
+                                    <button
+                                        className={`${styles.toggleBtn} ${roundType === 'technical' ? styles.toggleActive : ''}`}
+                                        onClick={() => setRoundType('technical')}
+                                    >
+                                        Technical Round
+                                    </button>
+                                )}
                             </div>
                         </div>
 

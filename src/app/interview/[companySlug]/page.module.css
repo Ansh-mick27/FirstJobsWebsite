@@ -613,12 +613,14 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 }
 
 .chatHistory {
     flex: 1;
     overflow-y: auto;
-    padding: 24px 28px;
+    padding: 24px 28px 120px;
+    /* Extra bottom padding for floating input */
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -718,12 +720,23 @@
 
 /* ─── Input Area ─────────────────────────────────────────────────────────────── */
 .inputArea {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border);
-    background: var(--bg-surface);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 24px 24px;
+    background: linear-gradient(to top, var(--bg-surface) 60%, transparent);
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 10px;
+    pointer-events: none;
+    /* Let clicks pass through the gradient */
+}
+
+/* Re-enable pointer events for the important elements inside inputArea */
+.inputArea>* {
+    pointer-events: auto;
 }
 
 .interviewDoneBanner {
@@ -739,29 +752,35 @@
 .inputBox {
     display: flex;
     align-items: flex-end;
-    gap: 10px;
-    background: var(--bg-elevated);
+    gap: 12px;
+    background: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 24px;
     padding: 10px 14px;
-    transition: border-color 0.2s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    width: 100%;
+    max-width: 700px;
 }
 
 .inputBox:focus-within {
-    border-color: var(--border-active);
+    border-color: var(--primary-subtle);
+    box-shadow: 0 6px 30px rgba(255, 45, 85, 0.08), 0 0 0 1px rgba(255, 45, 85, 0.2);
+    background: var(--bg-elevated);
 }
 
 .micBtn {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 20px;
+    background: transparent;
     color: var(--text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     flex-shrink: 0;
 }
 
@@ -771,6 +790,10 @@
 }
 
 .listening {
+    padding: 0 14px;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
     background: rgba(239, 68, 68, 0.15);
     color: var(--danger);
     animation: micPulse 1s ease infinite;
@@ -815,10 +838,40 @@
     border: none;
     resize: none;
     color: var(--text-primary);
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     line-height: 1.5;
-    max-height: 120px;
+    padding: 8px 10px 8px 4px;
+    max-height: 150px;
     overflow-y: auto;
+
+    /* Enable custom scrollbar overrides */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.textarea::-webkit-scrollbar {
+    display: block !important;
+    width: 6px;
+}
+
+.textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.textarea::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+.textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-subtle);
+}
+
+/* Override globals.css double-border issue */
+.textarea:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
 .textarea::placeholder {
@@ -826,15 +879,15 @@
 }
 
 .sendBtn {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
     background: var(--primary);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     flex-shrink: 0;
 }
 
@@ -1062,4 +1115,156 @@
     font-size: 0.85rem;
     color: var(--text-secondary);
     line-height: 1.6;
+}
+
+/* ─── User Answer in QA Breakdown ────────────────────────────────────────────── */
+.qaUserAnswer {
+    background: rgba(139, 92, 246, 0.06);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+
+.qaAnswerLabel {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--primary-bright);
+    margin-bottom: 6px;
+}
+
+.qaUserAnswer p {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* ─── Q Counter (avatar panel) ───────────────────────────────────────────────── */
+.qCounter {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-bright);
+    margin-top: 8px;
+    letter-spacing: 0.02em;
+}
+
+.qCounter span {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+/* ─── Last Question Preview (avatar panel) ───────────────────────────────────── */
+.lastQuestionBox {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
+    background: var(--bg-elevated);
+    flex-shrink: 0;
+}
+
+.lastQuestionLabel {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.lastQuestionText {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    max-height: 100px;
+    overflow-y: auto;
+    margin: 0;
+    /* subtle scroll */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+/* ─── Textarea Wrapper + Char Counter ────────────────────────────────────────── */
+.textareaWrapper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.charCounter {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    text-align: right;
+    padding-top: 2px;
+    line-height: 1;
+    user-select: none;
+}
+
+/* ─── Animated Feedback Loading Steps ────────────────────────────────────────── */
+.loadingSteps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+    text-align: left;
+    min-width: 260px;
+}
+
+.loadingStepItem {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.loadingStepVisible {
+    opacity: 1;
+    color: var(--text-secondary);
+}
+
+/* ─── Try Again & Share Buttons (feedback) ───────────────────────────────────── */
+.btnTryAgain {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.btnTryAgain:hover {
+    background: var(--bg-elevated);
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.btnShare {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    background: rgba(139, 92, 246, 0.08);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    color: var(--primary-bright);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.btnShare:hover {
+    background: rgba(139, 92, 246, 0.16);
+    box-shadow: 0 0 14px rgba(139, 92, 246, 0.2);
 }

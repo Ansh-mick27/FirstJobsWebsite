@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Mic, MicOff, Send, X, Volume2, VolumeX, Bot, ChevronLeft, ChevronDown, ChevronUp, Clock, StopCircle } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+
+import { Mic, MicOff, Send, X, Volume2, VolumeX, Bot, ChevronLeft, ChevronDown, ChevronUp, Clock, StopCircle, RefreshCw, Share2, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
@@ -13,6 +15,9 @@ const ROUND_TYPES = [
     { value: 'managerial', label: 'Managerial', desc: 'Leadership, Conflict Resolution, PM' },
 ];
 
+// Interview round type keys that map to the company.rounds object
+const INTERVIEW_ROUND_KEYS = ['technical', 'hr', 'managerial'];
+
 const HIRING_DECISION_CONFIG = {
     'Strong Yes': { color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)' },
     'Yes': { color: '#6ee7b7', bg: 'rgba(110,231,183,0.10)', border: 'rgba(110,231,183,0.25)' },
@@ -20,11 +25,36 @@ const HIRING_DECISION_CONFIG = {
     'No': { color: '#ef4444', bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.25)' },
 };
 
+// Score ring color: green ≥ 8, amber 5-7, red ≤ 4
+function scoreRingColor(score) {
+    if (score >= 8) return { stroke: '#10b981', glow: 'rgba(16,185,129,0.4)' };
+    if (score >= 5) return { stroke: '#f59e0b', glow: 'rgba(245,158,11,0.4)' };
+    return { stroke: '#ef4444', glow: 'rgba(239,68,68,0.4)' };
+}
+
+// Animated feedback loading steps
+const LOADING_STEPS = [
+    '✓ Reading your responses...',
+    '✓ Rating each answer 1–5...',
+    '✓ Detecting strengths & gaps...',
+    '✓ Generating hiring recommendation...',
+    '✓ Finalizing your report...',
+];
+
 export default function MockInterview() {
     const params = useParams();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const companySlug = params?.companySlug || 'company';
+    const searchParams = useSearchParams();
+    const roleId = searchParams?.get('roleId') || null;
+
+    // Auth guard
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push(`/login?next=${encodeURIComponent(`/interview/${companySlug}`)}`);
+        }
+    }, [authLoading, user, router, companySlug]);
 
     // ── State ──────────────────────────────────────────────────────────────────
     const [phase, setPhase] = useState('config'); // 'config' | 'active' | 'feedback'
@@ -39,23 +69,47 @@ export default function MockInterview() {
     const [isInterviewDone, setIsInterviewDone] = useState(false);
     const [feedback, setFeedback] = useState(null);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
+    const [loadingStep, setLoadingStep] = useState(0);
     const [roundType, setRoundType] = useState('technical');
     const [company, setCompany] = useState(null);
     const [elapsedSec, setElapsedSec] = useState(0);
-    const [expandedQA, setExpandedQA] = useState({}); // feedback question breakdown expand state
+    const [expandedQA, setExpandedQA] = useState({});
+    const [copied, setCopied] = useState(false);
+    const [hesitations, setHesitations] = useState([]); // [{ questionIndex, delaySeconds }]
+    const [voiceId, setVoiceId] = useState('en-IN-NeerjaNeural'); // Fallback voice
+
+    // ── Randomly select an Indian voice per session ─────────────────────────────
+    useEffect(() => {
+        const IN_VOICES = ['en-IN-PrabhatNeural', 'en-IN-NeerjaNeural'];
+        setVoiceId(IN_VOICES[Math.floor(Math.random() * IN_VOICES.length)]);
+    }, []);
 
     // ── Refs ───────────────────────────────────────────────────────────────────
     const recognitionRef = useRef(null);
     const chatEndRef = useRef(null);
     const textareaRef = useRef(null);
     const timerRef = useRef(null);
+    const loadingStepRef = useRef(null);
+    const hesitationStartRef = useRef(null); // timestamp when AI finished responding
+    const hesitationTimerRef = useRef(null); // interval checking for hesitation
 
     // ─── Fetch company ──────────────────────────────────────────────────────────
     useEffect(() => {
         async function fetchCompany() {
             try {
                 const res = await fetch(`/api/companies/${companySlug}`);
-                if (res.ok) { setCompany(await res.json()); return; }
+                if (res.ok) {
+                    const data = await res.json();
+                    setCompany(data);
+                    // Default to first available interview round type
+                    const available = INTERVIEW_ROUND_KEYS.filter(k =>
+                        !data.rounds || data.rounds[k] !== false
+                    );
+                    if (available.length > 0 && !available.includes(roundType)) {
+                        setRoundType(available[0]);
+                    }
+                    return;
+                }
             } catch { /* ignore */ }
             const name = companySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             setCompany({ id: companySlug, name, slug: companySlug });
@@ -63,7 +117,33 @@ export default function MockInterview() {
         fetchCompany();
     }, [companySlug]);
 
-    // ─── Elapsed timer (starts when phase = active) ─────────────────────────────
+    // Derive available interview round types — stable via useMemo
+    const availableRoundTypes = useMemo(() => {
+        const interviewRounds = ['technical', 'hr', 'managerial'];
+        if (roleId && company?.roles) {
+            const role = company.roles.find(r => r.id === roleId);
+            if (role?.roundTypes?.length) {
+                const filtered = ROUND_TYPES.filter(
+                    rt => interviewRounds.includes(rt.value) && role.roundTypes.includes(rt.value)
+                );
+                if (filtered.length > 0) return filtered;
+            }
+        }
+        if (company?.rounds) {
+            return ROUND_TYPES.filter(rt => company.rounds[rt.value] !== false);
+        }
+        return ROUND_TYPES;
+    }, [roleId, company?.roles, company?.rounds]);
+
+    // Auto-select first available round when available list changes
+    useEffect(() => {
+        const values = availableRoundTypes.map(r => r.value);
+        if (!values.includes(roundType) && values.length > 0) {
+            setRoundType(values[0]);
+        }
+    }, [availableRoundTypes, roundType]);
+
+    // ─── Elapsed timer ──────────────────────────────────────────────────────────
     useEffect(() => {
         if (phase === 'active' && !isInterviewDone) {
             timerRef.current = setInterval(() => setElapsedSec(s => s + 1), 1000);
@@ -73,6 +153,22 @@ export default function MockInterview() {
         return () => clearInterval(timerRef.current);
     }, [phase, isInterviewDone]);
 
+    // ─── Feedback loading step animator ────────────────────────────────────────
+    useEffect(() => {
+        if (feedbackLoading) {
+            setLoadingStep(0);
+            let step = 0;
+            loadingStepRef.current = setInterval(() => {
+                step++;
+                if (step < LOADING_STEPS.length) setLoadingStep(step);
+                else clearInterval(loadingStepRef.current);
+            }, 900);
+        } else {
+            clearInterval(loadingStepRef.current);
+        }
+        return () => clearInterval(loadingStepRef.current);
+    }, [feedbackLoading]);
+
     const formatTime = (sec) => {
         const m = Math.floor(sec / 60).toString().padStart(2, '0');
         const s = (sec % 60).toString().padStart(2, '0');
@@ -80,66 +176,203 @@ export default function MockInterview() {
     };
 
     // ─── Web Speech Recognition ─────────────────────────────────────────────────
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) return;
+    // Replaced native SpeechRecognition with universal MediaRecorder + Whisper API 
+    // to completely prevent "network" errors on Brave/Safari/Ad-blockers.
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
 
-        const recognition = new SR();
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-        recognition.onresult = (e) => {
-            const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-            setInput(transcript);
-        };
-        recognition.onend = () => setIsListening(false);
-        recognition.onerror = () => setIsListening(false);
-        recognitionRef.current = recognition;
-    }, []);
+    // ─── Hesitation tracking helpers ────────────────────────────────────────────
+    function startHesitationTimer(qIndex) {
+        if (hesitationStartRef.current !== null) return;
+        hesitationStartRef.current = Date.now();
+        console.log(`[Hesitation] Started timer for Q${qIndex}`);
+    }
 
-    function toggleMic() {
+    function cancelHesitationTimer() {
+        if (hesitationStartRef.current === null) return;
+        const elapsed = (Date.now() - hesitationStartRef.current) / 1000;
+        console.log(`[Hesitation] Cancelled timer. Elapsed: ${elapsed.toFixed(1)}s`);
+        hesitationStartRef.current = null;
+    }
+
+    async function toggleMic() {
+        cancelHesitationTimer();
+
+        // 1) Stop recording if already active
         if (isListening) {
-            recognitionRef.current?.stop();
-        } else {
-            setInput('');
-            recognitionRef.current?.start();
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                mediaRecorderRef.current.stop();
+            }
+            setIsListening(false);
+            return;
+        }
+
+        // 2) Start recording
+        try {
+            // Stop TTS audio so it doesn't compete with mic input
+            ++speakIdRef.current; // cancel any ongoing speak() loop
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = '';
+                audioRef.current = null;
+                setIsSpeaking(false);
+            }
+            window.speechSynthesis?.cancel();
+
+            // Request mic stream
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                // Release the microphone tracks immediately to turn off the green light
+                stream.getTracks().forEach(track => track.stop());
+
+                const mimeType = mediaRecorder.mimeType || 'audio/webm';
+                const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+                if (audioBlob.size === 0) return;
+
+                // Visual indicator while Whisper transcribes (~300ms)
+                setInput(prev => {
+                    const base = prev ? prev.trim() : '';
+                    return base ? `${base} (Transcribing...)` : '(Transcribing...)';
+                });
+
+                try {
+                    const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
+                    const formData = new FormData();
+                    formData.append('file', audioBlob, `speech.${ext}`);
+
+                    const res = await fetch('/api/stt', { method: 'POST', body: formData });
+                    if (!res.ok) throw new Error(`STT API returned ${res.status}`);
+
+                    const { text } = await res.json();
+
+                    // Replace the "Transcribing..." placeholder with actual text
+                    setInput(prev => {
+                        const clean = prev.replace(/\s*\(?Transcribing...\)?/g, '').trim();
+                        return clean ? clean + ' ' + text : text;
+                    });
+                } catch (err) {
+                    console.error('[Mic] Transcription error:', err);
+                    setInput(prev => prev.replace(/\s*\(?Transcribing...\)?/g, '').trim());
+                    alert('Transcription failed. Please check your internet connection or type manually.');
+                }
+            };
+
+            mediaRecorder.start();
             setIsListening(true);
+        } catch (err) {
+            console.error('[Mic] Access denied or error:', err);
+            alert('Microphone access was denied. Please allow microphone access in your browser settings.');
+            setIsListening(false);
         }
     }
 
-    // ─── Speech Synthesis ───────────────────────────────────────────────────────
-    const speak = useCallback((text) => {
-        if (isMuted || typeof window === 'undefined' || !window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(v => v.lang === 'en-US' && (v.name.includes('Google') || v.name.includes('Premium')))
-            || voices.find(v => v.lang === 'en-US');
-        if (preferred) utterance.voice = preferred;
-        utterance.rate = 0.92;
-        utterance.pitch = 1;
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-        window.speechSynthesis.speak(utterance);
+    // ─── Audio refs for Edge TTS ──────────────────────────────────────────────────
+    const audioRef = useRef(null);    // currently playing Audio element
+    const speakIdRef = useRef(0);     // cancel token — increment to abort ongoing speak()
+
+    // ─── Speech Synthesis — Microsoft Edge Neural TTS ─────────────────────────────
+    // Fetches all sentences in PARALLEL for low first-word latency (~400ms).
+    // Plays them in order as each resolves, cancellable via speakIdRef.
+    const speak = useCallback(async (text) => {
+        if (isMuted || !text?.trim()) return;
+
+        const myId = ++speakIdRef.current; // unique ID for this call
+
+        // Stop any currently playing audio
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.src = '';
+            audioRef.current = null;
+        }
+        setIsSpeaking(true);
+
+        // Split into sentences so we can fetch + play sentence-by-sentence
+        const sentences = text
+            .replace(/([.?!])\s+/g, '$1|||')
+            .split('|||')
+            .map(s => s.trim())
+            .filter(Boolean);
+        if (sentences.length === 0) { setIsSpeaking(false); return; }
+
+        // Kick off ALL sentence fetches in parallel immediately
+        const fetchAudio = async (sentence) => {
+            try {
+                const res = await fetch(`/api/tts?text=${encodeURIComponent(sentence)}&voice=${voiceId}`);
+                if (!res.ok) return null;
+                return URL.createObjectURL(await res.blob());
+            } catch { return null; }
+        };
+        const audioPromises = sentences.map(fetchAudio);
+
+        // Play sentences in order — start as soon as each one resolves
+        for (let i = 0; i < audioPromises.length; i++) {
+            if (speakIdRef.current !== myId) break; // cancelled (mute or new speak)
+
+            const audioUrl = await audioPromises[i];
+            if (!audioUrl || speakIdRef.current !== myId) {
+                if (audioUrl) URL.revokeObjectURL(audioUrl);
+                break;
+            }
+
+            await new Promise(resolve => {
+                const audio = new Audio(audioUrl);
+                audioRef.current = audio;
+                audio.onended = () => { URL.revokeObjectURL(audioUrl); audioRef.current = null; resolve(); };
+                audio.onerror = () => { URL.revokeObjectURL(audioUrl); audioRef.current = null; resolve(); };
+                audio.play().catch(() => resolve());
+            });
+        }
+
+        if (speakIdRef.current === myId) setIsSpeaking(false);
     }, [isMuted]);
 
     useEffect(() => {
-        if (isMuted && typeof window !== 'undefined') {
+        if (isMuted) {
+            ++speakIdRef.current; // abort any ongoing speak() loop
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = '';
+                audioRef.current = null;
+            }
             window.speechSynthesis?.cancel();
             setIsSpeaking(false);
         }
     }, [isMuted]);
+
+    // ─── prefetchTTS removed — sentence-parallel speak() is already fast enough ──
 
     // ─── Auto-scroll chat ───────────────────────────────────────────────────────
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // ─── Auto-resize textarea ───────────────────────────────────────────────────
+    useEffect(() => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }, [input]);
+
+    // ─── Derived: last AI question text ────────────────────────────────────────
+    const lastAiMessage = messages.filter(m => m.role === 'assistant').at(-1)?.content || '';
+
     // ─── Start Interview ────────────────────────────────────────────────────────
     async function startInterview() {
         setPhase('active');
+        setMessages([]);
+        setQuestionCount(0);
+        setElapsedSec(0);
+        setIsInterviewDone(false);
+        setSessionId(null);
         setIsLoading(true);
         try {
             const res = await fetch('/api/interview-chat', {
@@ -153,7 +386,10 @@ export default function MockInterview() {
                     userId: user?.uid || null,
                     companyId: company?.id || companySlug,
                     companySlug,
+                    roleId,
+                    hesitations: [],
                 }),
+
             });
             const data = await res.json();
             setSessionId(data.sessionId);
@@ -162,6 +398,7 @@ export default function MockInterview() {
             setQuestionCount(1);
             speak(data.reply);
             if (data.isComplete) setIsInterviewDone(true);
+            else startHesitationTimer(0); // start tracking Q1 response time
         } catch {
             const fallback = { role: 'assistant', content: `Welcome to your ${roundType} interview at ${company?.name || companySlug}! I'm your AI interviewer today. Let's get started — could you begin by telling me a little about yourself?` };
             setMessages([fallback]);
@@ -169,6 +406,8 @@ export default function MockInterview() {
             speak(fallback.content);
         }
         setIsLoading(false);
+        // Bug fix 3: Focus textarea so user can type immediately
+        setTimeout(() => textareaRef.current?.focus(), 50);
     }
 
     // ─── Send Message ───────────────────────────────────────────────────────────
@@ -176,6 +415,7 @@ export default function MockInterview() {
         if (!input.trim() || isLoading) return;
         if (isListening) recognitionRef.current?.stop();
 
+        cancelHesitationTimer();
         const userMsg = { role: 'user', content: input.trim() };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages);
@@ -194,23 +434,29 @@ export default function MockInterview() {
                     userId: user?.uid || null,
                     companyId: company?.id || companySlug,
                     companySlug,
+                    roleId,
+                    hesitations,
                 }),
+
             });
             const data = await res.json();
             const aiMsg = { role: 'assistant', content: data.reply };
             setMessages(prev => [...prev, aiMsg]);
 
-            // Use API's isComplete flag — no more fragile string matching
             if (data.isComplete) {
                 setIsInterviewDone(true);
             } else {
+                const nextQ = questionCount;
                 setQuestionCount(q => q + 1);
+                startHesitationTimer(nextQ);
             }
             speak(data.reply);
         } catch {
             setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting. Please check your network and try again." }]);
         }
         setIsLoading(false);
+        // Bug fix 3: Focus textarea so user can type immediately after AI responds
+        setTimeout(() => textareaRef.current?.focus(), 50);
     }
 
     // ─── End Interview Early ────────────────────────────────────────────────────
@@ -222,6 +468,7 @@ export default function MockInterview() {
 
     // ─── Get Feedback ───────────────────────────────────────────────────────────
     async function getFeedback() {
+        cancelHesitationTimer();
         setPhase('feedback');
         setFeedbackLoading(true);
         try {
@@ -234,6 +481,7 @@ export default function MockInterview() {
                     messages,
                     roundType,
                     companyName: company?.name || companySlug,
+                    hesitations,
                 }),
             });
             const data = await res.json();
@@ -250,6 +498,27 @@ export default function MockInterview() {
             });
         }
         setFeedbackLoading(false);
+    }
+
+    // ─── Share Results ──────────────────────────────────────────────────────────
+    function shareResults() {
+        if (!feedback) return;
+        const text = [
+            `🎯 PlacePrep Mock Interview — ${company?.name || companySlug} (${roundType})`,
+            `Score: ${feedback.score}/10 | Decision: ${feedback.hiringDecision}`,
+            '',
+            feedback.overallSummary,
+            '',
+            '💪 Strengths:',
+            ...(feedback.strengths || []).map(s => `  • ${s}`),
+            '',
+            '📈 Areas to improve:',
+            ...(feedback.weaknesses || []).map(w => `  • ${w}`),
+        ].join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
     }
 
     function handleKeyDown(e) {
@@ -279,7 +548,7 @@ export default function MockInterview() {
                         <div className={styles.configSection}>
                             <label className={styles.configLabel}>Round Type</label>
                             <div className={styles.roundGrid}>
-                                {ROUND_TYPES.map(rt => (
+                                {availableRoundTypes.map(rt => (
                                     <button
                                         key={rt.value}
                                         className={`${styles.roundCard} ${roundType === rt.value ? styles.roundCardActive : ''}`}
@@ -299,7 +568,7 @@ export default function MockInterview() {
                                     <li>Data structures &amp; Algorithms</li>
                                     <li>System design concepts</li>
                                     <li>OOP, DBMS, OS fundamentals</li>
-                                    <li>~7 questions, adaptive difficulty</li>
+                                    <li>~10 questions, adaptive difficulty</li>
                                 </ul>
                             )}
                             {roundType === 'hr' && (
@@ -343,7 +612,19 @@ export default function MockInterview() {
                     <div className={styles.feedbackLoading}>
                         <div className={styles.loadingSpinner} />
                         <h2>Analyzing your interview...</h2>
-                        <p>Your AI coach is reviewing the full transcript</p>
+                        <div className={styles.loadingSteps}>
+                            {LOADING_STEPS.map((step, i) => (
+                                <motion.div
+                                    key={i}
+                                    className={`${styles.loadingStepItem} ${i <= loadingStep ? styles.loadingStepVisible : ''}`}
+                                    initial={{ opacity: 0, x: -12 }}
+                                    animate={i <= loadingStep ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 }}
+                                    transition={{ duration: 0.35 }}
+                                >
+                                    {step}
+                                </motion.div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             );
@@ -354,6 +635,7 @@ export default function MockInterview() {
             const circumference = 2 * Math.PI * 54;
             const fillDash = (pct / 100) * circumference;
             const decisionConfig = HIRING_DECISION_CONFIG[feedback.hiringDecision] || HIRING_DECISION_CONFIG['Maybe'];
+            const ringColor = scoreRingColor(feedback.score);
 
             return (
                 <div className={styles.container}>
@@ -376,11 +658,17 @@ export default function MockInterview() {
                                     <circle
                                         cx="60" cy="60" r="54"
                                         className={styles.ringFill}
-                                        style={{ strokeDasharray: `${fillDash} ${circumference}`, '--fill-dash': fillDash, '--circumference': circumference }}
+                                        style={{
+                                            strokeDasharray: `${fillDash} ${circumference}`,
+                                            '--fill-dash': fillDash,
+                                            '--circumference': circumference,
+                                            stroke: ringColor.stroke,
+                                            filter: `drop-shadow(0 0 8px ${ringColor.glow})`,
+                                        }}
                                     />
                                 </svg>
                                 <div className={styles.scoreCenter}>
-                                    <span className={styles.scoreNum}>{feedback.score}/10</span>
+                                    <span className={styles.scoreNum} style={{ color: ringColor.stroke }}>{feedback.score}/10</span>
                                     <span className={styles.scoreLbl}>Score</span>
                                 </div>
                             </div>
@@ -418,48 +706,70 @@ export default function MockInterview() {
                                 </div>
                             )}
 
-                            {/* Per-question Breakdown */}
+                            {/* Per-question Breakdown — with user answers */}
                             {feedback.questionBreakdown?.length > 0 && (
                                 <div className={styles.feedbackSection}>
                                     <h3>🎯 Question Breakdown</h3>
-                                    {feedback.questionBreakdown.map((qa, i) => (
-                                        <div key={i} className={styles.qaCard}>
-                                            <button
-                                                className={styles.qaCardHeader}
-                                                onClick={() => setExpandedQA(prev => ({ ...prev, [i]: !prev[i] }))}
-                                            >
-                                                <div className={styles.qaCardLeft}>
-                                                    <span className={styles.qaNum}>Q{i + 1}</span>
-                                                    <span className={styles.qaQuestion}>{qa.question?.slice(0, 80)}{qa.question?.length > 80 ? '…' : ''}</span>
-                                                </div>
-                                                <div className={styles.qaCardRight}>
-                                                    <div className={styles.ratingDots}>
-                                                        {[1, 2, 3, 4, 5].map(d => (
-                                                            <div key={d} className={`${styles.ratingDot} ${d <= (qa.rating || 3) ? styles.ratingDotFilled : ''}`} />
-                                                        ))}
+                                    {feedback.questionBreakdown.map((qa, i) => {
+                                        // Match user answer from messages (user messages are odd-indexed after first AI msg)
+                                        const userMessages = messages.filter(m => m.role === 'user');
+                                        const userAnswer = userMessages[i]?.content || null;
+
+                                        return (
+                                            <div key={i} className={styles.qaCard}>
+                                                <button
+                                                    className={styles.qaCardHeader}
+                                                    onClick={() => setExpandedQA(prev => ({ ...prev, [i]: !prev[i] }))}
+                                                >
+                                                    <div className={styles.qaCardLeft}>
+                                                        <span className={styles.qaNum}>Q{i + 1}</span>
+                                                        <span className={styles.qaQuestion}>{qa.question?.slice(0, 80)}{qa.question?.length > 80 ? '…' : ''}</span>
                                                     </div>
-                                                    {expandedQA[i] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                                </div>
-                                            </button>
-                                            <AnimatePresence>
-                                                {expandedQA[i] && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className={styles.qaCardBody}
-                                                    >
-                                                        {qa.comment && <p className={styles.qaComment}>{qa.comment}</p>}
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                    ))}
+                                                    <div className={styles.qaCardRight}>
+                                                        <div className={styles.ratingDots}>
+                                                            {[1, 2, 3, 4, 5].map(d => (
+                                                                <div key={d} className={`${styles.ratingDot} ${d <= (qa.rating || 3) ? styles.ratingDotFilled : ''}`} />
+                                                            ))}
+                                                        </div>
+                                                        {expandedQA[i] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                    </div>
+                                                </button>
+                                                <AnimatePresence>
+                                                    {expandedQA[i] && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            transition={{ duration: 0.2 }}
+                                                            className={styles.qaCardBody}
+                                                        >
+                                                            {userAnswer && (
+                                                                <div className={styles.qaUserAnswer}>
+                                                                    <span className={styles.qaAnswerLabel}>Your answer:</span>
+                                                                    <p>{userAnswer}</p>
+                                                                </div>
+                                                            )}
+                                                            {qa.comment && <p className={styles.qaComment}>{qa.comment}</p>}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
 
                             <div className={styles.feedbackActions}>
+                                <button className={styles.btnTryAgain} onClick={() => {
+                                    setFeedback(null);
+                                    setMessages([]);
+                                    setPhase('config');
+                                }}>
+                                    <RefreshCw size={15} /> Try Again
+                                </button>
+                                <button className={styles.btnShare} onClick={shareResults}>
+                                    {copied ? <><CheckCircle size={15} /> Copied!</> : <><Share2 size={15} /> Share Results</>}
+                                </button>
                                 <button className={styles.btnSecondary} onClick={() => router.push(`/companies/${companySlug}`)}>
                                     Back to Company
                                 </button>
@@ -487,9 +797,9 @@ export default function MockInterview() {
 
                 <div className={styles.progressWrapper}>
                     <div className={styles.progressTrack}>
-                        <div className={styles.progressFill} style={{ width: `${Math.min((questionCount / 7) * 100, 100)}%` }} />
+                        <div className={styles.progressFill} style={{ width: `${Math.min((questionCount / (roundType === 'technical' ? 10 : 7)) * 100, 100)}%` }} />
                     </div>
-                    <span className={styles.progressLabel}>Question {questionCount} of ~7</span>
+                    <span className={styles.progressLabel}>Question {questionCount} of {roundType === 'technical' ? '~10' : '~7'}</span>
                 </div>
 
                 <div className={styles.topActions}>
@@ -555,7 +865,20 @@ export default function MockInterview() {
                         <p className={styles.agentStatus}>
                             {isLoading ? '✍️ Thinking...' : isSpeaking ? '🔊 Speaking...' : isListening ? '🎤 Listening...' : '👂 Waiting...'}
                         </p>
+
+                        {/* Q counter */}
+                        <div className={styles.qCounter}>
+                            Q {questionCount} <span>/ {roundType === 'technical' ? '~10' : '~7'}</span>
+                        </div>
                     </div>
+
+                    {/* Last AI question preview */}
+                    {lastAiMessage && (
+                        <div className={styles.lastQuestionBox}>
+                            <div className={styles.lastQuestionLabel}>Current Question</div>
+                            <p className={styles.lastQuestionText}>{lastAiMessage}</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Chat Panel */}
@@ -599,22 +922,34 @@ export default function MockInterview() {
                             <button
                                 className={`${styles.micBtn} ${isListening ? styles.listening : ''}`}
                                 onClick={toggleMic}
-                                title={isListening ? 'Stop recording' : 'Start voice input'}
+                                title={isListening ? 'Stop recording and transcribe' : 'Start voice input'}
                                 disabled={isInterviewDone}
                             >
-                                {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                                {isListening ? (
+                                    <>
+                                        <StopCircle size={18} />
+                                        <span>Stop & Transcribe</span>
+                                    </>
+                                ) : (
+                                    <Mic size={20} />
+                                )}
                                 {isListening && <div className={styles.micPulse} />}
                             </button>
-                            <textarea
-                                ref={textareaRef}
-                                placeholder="Type your response or click the mic..."
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                className={styles.textarea}
-                                rows={2}
-                                disabled={isLoading || isInterviewDone}
-                            />
+                            <div className={styles.textareaWrapper}>
+                                <textarea
+                                    ref={textareaRef}
+                                    placeholder="Type your response or click the mic..."
+                                    value={input}
+                                    onChange={e => { cancelHesitationTimer(); setInput(e.target.value); }}
+                                    onKeyDown={handleKeyDown}
+                                    className={styles.textarea}
+                                    rows={1}
+                                    disabled={isLoading || isInterviewDone}
+                                />
+                                {input.length > 0 && (
+                                    <div className={styles.charCounter}>{input.length} chars</div>
+                                )}
+                            </div>
                             <button
                                 className={styles.sendBtn}
                                 onClick={sendMessage}

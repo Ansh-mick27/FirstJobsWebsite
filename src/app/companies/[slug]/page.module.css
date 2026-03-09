@@ -180,6 +180,53 @@
     text-transform: uppercase;
 }
 
+/* ── Role Selector ─────────────────────────────────── */
+.roleSelectorRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.roleSelectorLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+}
+
+.rolePills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.rolePill {
+    padding: 5px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.rolePill:hover {
+    border-color: rgba(124, 58, 237, 0.5);
+    color: #c4b5fd;
+}
+
+.rolePillActive {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(124, 58, 237, 0.55);
+    color: #a78bfa;
+}
+
 /* ── Tabs ──────────────────────────────────────────── */
 .tabContainer {
     margin-bottom: 28px;
@@ -292,8 +339,38 @@
 .configCard p {
     color: var(--text-secondary);
     font-size: 0.9rem;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
 }
+
+/* Round type pills shown in interview config card */
+.configRoundPills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.configRoundLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.configRoundPill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--primary-subtle);
+    color: var(--primary-bright);
+    border: 1px solid var(--border-active);
+    letter-spacing: 0.04em;
+}
+
+
 
 .configOptions {
     display: flex;

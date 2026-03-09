@@ -459,7 +459,8 @@ export default function ParadoxLandingPage() {
     }, []);
 
     return (
-        <div className={styles.page}>
+        <div className={styles.page} suppressHydrationWarning>
+
             <div className={styles.noiseOverlay} />
             <div className={styles.readingProgress} style={{ width: `${readProgress}%` }} />
 
@@ -732,13 +733,13 @@ export default function ParadoxLandingPage() {
                 <div className={styles.momentContent}>
                     <div className={styles.momentQuoteMark}>"</div>
                     <p className={styles.momentQuote}>
-                        I had my TCS interview in 3 weeks and had no idea what to actually prepare. Paradox had the exact questions from last year's drive at our college. I practiced the HR round with the AI four times. On the day, I knew what was coming.
+                        I wish I had this when I was preparing for my interviews. It would have made a huge difference.
                     </p>
                     <div className={styles.momentAuthor}>
-                        <div className={styles.momentAvatar}>P</div>
+                        <div className={styles.momentAvatar}>C</div>
                         <div>
-                            <div className={styles.momentName}>Priya S. <CheckCircle2 size={14} className={styles.momentVerified} /></div>
-                            <div className={styles.momentRole}>CSE 2024 &middot; Placed at TCS</div>
+                            <div className={styles.momentName}>Chainika D. <CheckCircle2 size={14} className={styles.momentVerified} /></div>
+                            <div className={styles.momentRole}>CSE 2025 &middot; Placed at Capgemini</div>
                         </div>
                     </div>
                 </div>
@@ -762,7 +763,7 @@ export default function ParadoxLandingPage() {
                 <p className={styles.callNote}>Sign up with your college email. Free forever for students.</p>
 
                 <div className={styles.footer}>
-                    Paradox &copy; 2024 &middot; Built for engineers, by engineers &middot; Not affiliated with any company
+                    Paradox &copy; 2026 &middot; Built for engineers, by engineers &middot; Not affiliated with any company
                 </div>
             </section>
 

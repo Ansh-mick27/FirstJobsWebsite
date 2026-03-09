@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, LogOut, LayoutDashboard, Infinity as InfinityIcon } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, MessageSquare, Infinity as InfinityIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import styles from './Navbar.module.css';
 
@@ -38,7 +38,7 @@ export default function Navbar() {
 
     const displayName = profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
 
-    const HIDDEN_ON = ['/test/', '/interview/'];
+    const HIDDEN_ON = ['/test/', '/interview/', '/admin'];
     const isHidden = pathname === '/' || HIDDEN_ON.some(p => pathname.startsWith(p));
     if (isHidden) return null;
 
@@ -71,6 +71,14 @@ export default function Navbar() {
                             >
                                 <LayoutDashboard size={16} />
                                 {displayName}
+                            </Link>
+                            <Link
+                                href="/feedback"
+                                className={`${styles.navLink} ${pathname === '/feedback' ? styles.activeLink : ''}`}
+                                onClick={() => setIsOpen(false)}
+                            >
+                                <MessageSquare size={16} />
+                                Feedback
                             </Link>
                             <button className={styles.logoutBtn} onClick={handleSignOut}>
                                 <LogOut size={16} />

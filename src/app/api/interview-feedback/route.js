@@ -6,7 +6,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 /**
  * POST /api/interview-feedback
- * Body: { sessionId, userId, messages, roundType, companyName }
+ * Body: { sessionId, userId, messages, roundType, companyName, hesitations }
  * Returns: { feedback: AIFeedback }
  */
 export async function POST(request) {
@@ -17,13 +17,20 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { sessionId, userId, messages, roundType = 'technical', companyName = 'the company' } = body;
+    const {
+        sessionId,
+        userId,
+        messages,
+        roundType = 'technical',
+        companyName = 'the company',
+        hesitations = [],   // [{ questionIndex, delaySeconds }]
+    } = body;
 
     if (!messages?.length) {
         return NextResponse.json({ error: 'messages are required' }, { status: 400 });
     }
 
-    // Build a clean readable transcript
+    // Build clean Q&A pairs
     const qaExchanges = [];
     let currentQ = null;
     for (const m of messages.filter(m => m.role !== 'system')) {
@@ -40,39 +47,53 @@ export async function POST(request) {
         .map(m => `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content}`)
         .join('\n');
 
+    // Build hesitation context for the AI
+    const hesitationContext = hesitations.length > 0
+        ? `\n\nHesitation data (time from AI question to candidate's first response action):\n${hesitations.map(h => `- Question #${h.questionIndex + 1}: ${Math.round(h.delaySeconds)} seconds before responding`).join('\n')
+        }\nA delay >12 seconds typically indicates the candidate was uncertain or needed to think. Factor this into your analysis — significant hesitation on multiple questions should reduce the score. Note it explicitly in the overallSummary or weaknesses if relevant.`
+        : '';
+
     try {
         const completion = await groq.chat.completions.create({
             messages: [
                 {
                     role: 'system',
-                    content: `You are an expert interview coach reviewing a ${roundType} round campus placement interview at ${companyName}.
-Analyze the candidate's performance and return a structured JSON feedback object with EXACTLY these fields:
+                    content: `You are a senior interview coach at a top tech company reviewing a ${roundType} round campus placement interview at ${companyName}.
+Analyze the candidate's performance holistically and return a structured JSON feedback object with EXACTLY these fields:
 {
   "score": <integer 1-10>,
   "hiringDecision": <"Strong Yes" | "Yes" | "Maybe" | "No">,
-  "overallSummary": "<2-3 sentence honest, specific summary>",
-  "strengths": ["<specific strength>", ...],
-  "weaknesses": ["<specific area to improve>", ...],
-  "suggestions": ["<specific actionable advice>", ...],
+  "overallSummary": "<2-3 sentence honest, specific, human-sounding summary — reference what the candidate actually said>",
+  "strengths": ["<specific, concrete strength referenced from the interview>", ...],
+  "weaknesses": ["<specific, actionable area to improve>", ...],
+  "suggestions": ["<specific, practical advice the candidate can act on before their next interview>", ...],
   "questionBreakdown": [
-    { "question": "<interviewer question>", "rating": <1-5>, "comment": "<one sentence feedback on the answer>" },
+    { "question": "<interviewer question>", "rating": <1-5>, "comment": "<one specific sentence about this answer — be honest, not generic>" },
     ...
   ]
 }
+Scoring guide:
+- 9-10 → Strong Yes (exceptional answers, confident, specific)
+- 7-8 → Yes (solid answers with minor gaps)
+- 5-6 → Maybe (some good points but significant gaps or vague answers)
+- 1-4 → No (consistently weak, vague, or off-topic answers)
+
 Rules:
-- questionBreakdown must cover every question-answer pair in the transcript.
-- Be specific and reference the candidate's actual answers, not generic advice.
-- hiringDecision: "Strong Yes" = 9-10, "Yes" = 7-8, "Maybe" = 5-6, "No" = 1-4.
-- Return ONLY valid JSON, no markdown, no explanation.`,
+- questionBreakdown must include every Q&A pair from the transcript.
+- Be SPECIFIC — reference the candidate's actual words/answers, not generic platitudes.
+- If hesitation data is provided, factor it into your score and mention it where relevant.
+- Strengths and weaknesses should each have 2-4 items.
+- Suggestions should be 2-4 practical, specific actions.
+- Return ONLY valid JSON. No markdown, no explanation, no code fences.`,
                 },
                 {
                     role: 'user',
-                    content: `Interview transcript:\n\n${transcript}\n\nProvide detailed structured feedback.`,
+                    content: `Interview transcript:\n\n${transcript}${hesitationContext}\n\nProvide detailed structured feedback.`,
                 },
             ],
             model: 'llama-3.3-70b-versatile',
-            temperature: 0.4,
-            max_tokens: 1500,
+            temperature: 0.35,
+            max_tokens: 2000,
             response_format: { type: 'json_object' },
         });
 
@@ -83,7 +104,7 @@ Rules:
             return NextResponse.json({ error: 'AI returned invalid JSON feedback' }, { status: 502 });
         }
 
-        // Persist to Firestore if we have identifiers
+        // Persist to Firestore
         if (userId && sessionId && sessionId !== 'local') {
             try {
                 const sessionRef = adminDb
@@ -94,7 +115,8 @@ Rules:
                 await sessionRef.update({
                     aiFeedback: feedback,
                     isComplete: true,
-                    completedAt: new Date(),
+                    completedAt: new Date().toISOString(),
+                    hesitations,
                 });
             } catch (firestoreErr) {
                 console.warn('[interview-feedback] Firestore update failed:', firestoreErr.message);

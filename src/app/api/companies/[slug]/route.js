@@ -39,7 +39,11 @@ export async function GET(request, { params }) {
             hr: questions.filter((q) => q.round === 'hr'),
         };
 
-        return NextResponse.json({ ...company, questions, questionsByRound });
+        // Fetch job roles subcollection
+        const rolesSnapshot = await companyDoc.ref.collection('roles').orderBy('name').get();
+        const roles = rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        return NextResponse.json({ ...company, questions, questionsByRound, roles });
     } catch (error) {
         console.error('[GET /api/companies/[slug]]', error);
         return NextResponse.json({ error: 'Failed to fetch company' }, { status: 500 });

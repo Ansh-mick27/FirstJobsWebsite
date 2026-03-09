@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, BrainCircuit, Terminal, BookOpen, Clock, LayoutList, ChevronLeft, Loader2 } from 'lucide-react';
@@ -8,28 +8,39 @@ import StudyMaterial from '@/components/StudyMaterial';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
 
-const tabs = [
+// Static tab definitions — icons created once at module load, never re-created per render
+const ALL_TABS = [
     { id: 'study', label: 'Study Material', icon: <BookOpen size={16} /> },
     { id: 'test', label: 'Mock Test', icon: <Terminal size={16} /> },
-    { id: 'interview', label: 'Mock Interview', icon: <BrainCircuit size={16} /> }
+    { id: 'interview', label: 'Mock Interview', icon: <BrainCircuit size={16} /> },
 ];
 
 export default function CompanyDetail() {
+    // ─── ALL HOOKS FIRST — never below an early return ───────────────────────
     const params = useParams();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const slug = params?.slug || '';
+
     const [activeTab, setActiveTab] = useState('study');
     const [company, setCompany] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedRoleId, setSelectedRoleId] = useState('');  // '' = All Roles
 
-    // Scroll to top on page load
+    // Auth guard — redirect unauthenticated users to login
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push(`/login?next=${encodeURIComponent(`/companies/${slug}`)}`);
+        }
+    }, [authLoading, user, router, slug]);
+
+    // Scroll to top on mount
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'instant' });
     }, []);
 
-    // Fetch company data from API
+    // Fetch company data
     useEffect(() => {
         if (!slug) return;
         async function fetchCompany() {
@@ -51,9 +62,41 @@ export default function CompanyDetail() {
         fetchCompany();
     }, [slug]);
 
-    const handleStartTest = () => router.push(`/test/${slug}`);
-    const handleStartInterview = () => router.push(`/interview/${slug}`);
+    // Derived state — safe to useMemo here because it handles null company
+    const roles = useMemo(() => company?.roles || [], [company]);
+    const selectedRole = useMemo(() => roles.find(r => r.id === selectedRoleId) || null, [roles, selectedRoleId]);
 
+    // Available tabs filtered by selected role's roundTypes
+    const availableTabs = useMemo(() => {
+        if (!selectedRole || roles.length === 0) return ALL_TABS;
+        const rt = selectedRole.roundTypes || [];
+        return ALL_TABS.filter(tab => {
+            if (tab.id === 'study') return true;
+            if (tab.id === 'test') return rt.includes('oa') || rt.includes('technical');
+            if (tab.id === 'interview') return rt.includes('technical') || rt.includes('hr') || rt.includes('managerial');
+            return false;
+        });
+    }, [selectedRole, roles.length]);
+
+    // Round badges for the hero banner
+    const roundKeys = useMemo(() => {
+        if (!company?.rounds) return [];
+        return Array.isArray(company.rounds)
+            ? company.rounds
+            : Object.keys(company.rounds).filter(k => company.rounds[k]);
+    }, [company?.rounds]);
+
+    // Navigation helpers
+    const handleStartTest = () => {
+        const url = selectedRoleId ? `/test/${slug}?roleId=${selectedRoleId}` : `/test/${slug}`;
+        router.push(url);
+    };
+    const handleStartInterview = () => {
+        const url = selectedRoleId ? `/interview/${slug}?roleId=${selectedRoleId}` : `/interview/${slug}`;
+        router.push(url);
+    };
+
+    // ─── EARLY RETURNS — only AFTER every hook ────────────────────────────────
     if (loading) {
         return (
             <div className={styles.page}>
@@ -78,20 +121,11 @@ export default function CompanyDetail() {
         );
     }
 
-    const userEmail = user?.email || 'student@placeprep.com';
-    // All questions for study material tab
-    const allQuestions = company.questions || [];
-    // Rounds from Firestore (could be an object or array)
-    const roundKeys = company.rounds
-        ? (Array.isArray(company.rounds)
-            ? company.rounds
-            : Object.keys(company.rounds).filter(k => company.rounds[k]))
-        : [];
-
+    // ─── RENDER ───────────────────────────────────────────────────────────────
     return (
         <div className={styles.page}>
             <div className="container">
-                {/* Back button — above banner */}
+                {/* Back button */}
                 <button className={styles.btnBack} onClick={() => router.back()}>
                     <ChevronLeft size={14} /> Back to Companies
                 </button>
@@ -120,10 +154,34 @@ export default function CompanyDetail() {
                     </div>
                 </div>
 
-                {/* Custom Tabs */}
+                {/* Role Selector Pills */}
+                {roles.length > 0 && (
+                    <div className={styles.roleSelectorRow}>
+                        <span className={styles.roleSelectorLabel}>Role:</span>
+                        <div className={styles.rolePills}>
+                            <button
+                                className={`${styles.rolePill} ${selectedRoleId === '' ? styles.rolePillActive : ''}`}
+                                onClick={() => { setSelectedRoleId(''); setActiveTab('study'); }}
+                            >
+                                All Roles
+                            </button>
+                            {roles.map(role => (
+                                <button
+                                    key={role.id}
+                                    className={`${styles.rolePill} ${selectedRoleId === role.id ? styles.rolePillActive : ''}`}
+                                    onClick={() => { setSelectedRoleId(role.id); setActiveTab('study'); }}
+                                >
+                                    {role.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Tab Bar */}
                 <div className={styles.tabContainer}>
                     <div className={styles.tabList}>
-                        {tabs.map((tab) => (
+                        {availableTabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 className={`${styles.tabBtn} ${activeTab === tab.id ? styles.activeTabBtn : ''}`}
@@ -135,7 +193,7 @@ export default function CompanyDetail() {
                                     <motion.div
                                         className={styles.tabIndicator}
                                         layoutId="tabIndicator"
-                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                                     />
                                 )}
                             </button>
@@ -154,10 +212,24 @@ export default function CompanyDetail() {
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
                             >
-                                <StudyMaterial
-                                    slug={slug}
-                                    companyName={company.name}
-                                />
+                                {selectedRoleId === '' || !selectedRole
+                                    ? (
+                                        // All-Roles: pass roles array so StudyMaterial renders grouped view
+                                        <StudyMaterial
+                                            slug={slug}
+                                            companyName={company.name}
+                                            roles={roles}
+                                        />
+                                    ) : (
+                                        // Single role: pass role name so StudyMaterial resolves rich ROLE_SYLLABI
+                                        <StudyMaterial
+                                            slug={slug}
+                                            companyName={company.name}
+                                            roleName={selectedRole.name}
+                                            syllabus={selectedRole.syllabus}
+                                        />
+                                    )
+                                }
                             </motion.div>
                         )}
 
@@ -173,12 +245,10 @@ export default function CompanyDetail() {
                                 <div className={styles.configIcon}><Terminal size={32} /></div>
                                 <h2>Configure Mock Test</h2>
                                 <p>Simulate the exact test environment for {company.name}.</p>
-
                                 <div className={styles.configFeatures}>
                                     <span><Clock size={14} /> Timed Assessment</span>
                                     <span><LayoutList size={14} /> Strict Evaluation</span>
                                 </div>
-
                                 <button className={styles.btnStart} onClick={handleStartTest}>
                                     Launch Test <ArrowRight size={18} />
                                 </button>
@@ -197,12 +267,24 @@ export default function CompanyDetail() {
                                 <div className={styles.configIcon}><BrainCircuit size={32} /></div>
                                 <h2>AI Interviewer Config</h2>
                                 <p>Face our specialized AI agent trained on {company.name}&apos;s interview patterns.</p>
-
+                                {/* Show available interview round types for the selected role */}
+                                {selectedRole?.roundTypes?.length > 0 && (
+                                    <div className={styles.configRoundPills}>
+                                        <span className={styles.configRoundLabel}>Available rounds:</span>
+                                        {selectedRole.roundTypes
+                                            .filter(rt => ['technical', 'hr', 'managerial'].includes(rt))
+                                            .map(rt => (
+                                                <span key={rt} className={styles.configRoundPill}>
+                                                    {rt.charAt(0).toUpperCase() + rt.slice(1)}
+                                                </span>
+                                            ))
+                                        }
+                                    </div>
+                                )}
                                 <div className={styles.configFeatures}>
                                     <span><Clock size={14} /> 30-45 Minute Session</span>
                                     <span><BrainCircuit size={14} /> Adaptive Feedback</span>
                                 </div>
-
                                 <button className={styles.btnStart} onClick={handleStartInterview}>
                                     Start AI Interview <ArrowRight size={18} />
                                 </button>
