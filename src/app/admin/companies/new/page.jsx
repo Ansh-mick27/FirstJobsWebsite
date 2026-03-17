@@ -1,9 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, X, Check } from 'lucide-react';
-
-const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+import { ArrowLeft, X, Check } from 'lucide-react';
+import { getAdminToken } from '../../layout';
 
 const INDUSTRIES = ['IT Services', 'Product', 'Consulting', 'BFSI', 'Core', 'Other'];
 
@@ -61,7 +60,7 @@ export default function NewCompanyPage() {
         try {
             const res = await fetch('/api/admin/companies', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY },
+                headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminToken() },
                 body: JSON.stringify({ ...form, logo: form.logo || null }),
             });
             const data = await res.json();

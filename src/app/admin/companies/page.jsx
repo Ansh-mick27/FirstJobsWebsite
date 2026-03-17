@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit3, Trash2, ChevronDown } from 'lucide-react';
-
-const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || '';
+import { Plus, Search, Edit3, Trash2 } from 'lucide-react';
+import { getAdminToken } from '../layout';
 
 
 export default function CompaniesPage() {
@@ -16,7 +15,7 @@ export default function CompaniesPage() {
     const fetchCompanies = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/companies', { headers: { 'x-admin-key': ADMIN_KEY } });
+            const res = await fetch('/api/admin/companies', { headers: { 'x-admin-key': getAdminToken() } });
             const data = await res.json();
             setCompanies(Array.isArray(data) ? data : []);
         } catch (err) { console.error(err); }
@@ -36,7 +35,7 @@ export default function CompaniesPage() {
         try {
             await fetch(`/api/admin/companies/${deleteModal.id}`, {
                 method: 'DELETE',
-                headers: { 'x-admin-key': ADMIN_KEY },
+                headers: { 'x-admin-key': getAdminToken() },
             });
             setCompanies(prev => prev.filter(c => c.id !== deleteModal.id));
             setDeleteModal(null);

@@ -1,0 +1,191 @@
+.page {
+    padding: 60px 0 100px;
+    min-height: calc(100vh - 80px);
+    /* Assuming navbar is 80px */
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 48px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    letter-spacing: -1px;
+}
+
+.subtitle {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.controls {
+    margin-bottom: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.searchBar {
+    position: relative;
+    width: 100%;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 20px 20px 20px 56px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: var(--border-active);
+    box-shadow: 0 0 0 1px var(--border-active), 0 0 20px var(--primary-subtle);
+}
+
+.searchInput:focus+.searchIcon {
+    color: var(--primary-bright);
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+.filterPill {
+    padding: 10px 20px;
+    border-radius: 999px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.filterPill:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.activePill {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+    color: var(--primary-bright);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+@media (max-width: 1024px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .title {
+        font-size: 2.5rem;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .searchInput {
+        padding: 16px 16px 16px 48px;
+    }
+
+    .searchIcon {
+        left: 16px;
+    }
+}
+
+/* Loading Skeleton */
+.skeletonCard {
+    height: 200px;
+    border-radius: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Empty State */
+.emptyState {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-secondary);
+}
+
+.emptyState p {
+    font-size: 1.125rem;
+    margin-bottom: 20px;
+}
+
+.clearBtn {
+    padding: 10px 24px;
+    border-radius: 999px;
+    background: var(--primary-subtle);
+    border: 1px solid var(--primary);
+    color: var(--primary-bright);
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clearBtn:hover {
+    background: var(--primary);
+    color: white;
+}
+
+/* Error */
+.errorMsg {
+    text-align: center;
+    padding: 20px;
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 12px;
+    margin-bottom: 24px;
+}

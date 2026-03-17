@@ -70,7 +70,8 @@ export async function POST(request) {
 }
 
 /**
- * GET /api/admin/questions?companyId=xxx
+ * GET /api/admin/questions?companyId=xxx  → questions for one company
+ * GET /api/admin/questions                → ALL questions (collectionGroup)
  * Returns ALL question fields (including correctAnswer/solution) for admin use.
  */
 export async function GET(request) {
@@ -80,18 +81,27 @@ export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
         const companyId = searchParams.get('companyId');
-        if (!companyId) {
-            return NextResponse.json({ error: 'companyId is required' }, { status: 400 });
+
+        if (companyId) {
+            // Single-company query
+            const snapshot = await adminDb
+                .collection('companies')
+                .doc(companyId)
+                .collection('questions')
+                .get();
+            const questions = snapshot.docs.map((doc) => ({ id: doc.id, companyId, ...doc.data() }));
+            return NextResponse.json(questions);
+        } else {
+            // Global query across all companies via collection group
+            const snapshot = await adminDb.collectionGroup('questions').get();
+            const questions = snapshot.docs.map((doc) => {
+                // Path: companies/{companyId}/questions/{questionId}
+                const pathParts = doc.ref.path.split('/');
+                const resolvedCompanyId = pathParts[1] || '';
+                return { id: doc.id, companyId: resolvedCompanyId, ...doc.data() };
+            });
+            return NextResponse.json(questions);
         }
-
-        const snapshot = await adminDb
-            .collection('companies')
-            .doc(companyId)
-            .collection('questions')
-            .get();
-
-        const questions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        return NextResponse.json(questions);
     } catch (error) {
         console.error('[GET /api/admin/questions]', error);
         return NextResponse.json({ error: 'Failed to fetch questions' }, { status: 500 });
