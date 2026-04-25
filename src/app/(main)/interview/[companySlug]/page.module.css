@@ -1321,3 +1321,16 @@
     max-width: 80%;
     text-align: center;
 }
+
+/* ─── Waveform container (was missing — bars need flex row layout) ───────────── */
+.waveform {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 28px;
+}
+
+@keyframes wave {
+    0%, 100% { height: 6px; }
+    50%       { height: 22px; }
+}

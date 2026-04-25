@@ -392,9 +392,10 @@ export default function MockInterview() {
                 break;
             case 'userTranscript':
                 if (msg.finished) {
-                    const fullUser = partialUserRef.current + (msg.text || '');
+                    // Pass only msg.text (the final piece); reducer will combine state.partialUser + msg.text.
+                    // Do NOT pass partialUserRef.current here — that would double the accumulated chunks.
                     partialUserRef.current = '';
-                    dispatch({ type: 'USER_TRANSCRIPT_DONE', text: fullUser });
+                    dispatch({ type: 'USER_TRANSCRIPT_DONE', text: msg.text || '' });
                 } else {
                     partialUserRef.current += msg.text || '';
                     dispatch({ type: 'USER_TRANSCRIPT_CHUNK', text: msg.text || '' });
