@@ -71,7 +71,13 @@ export default function MockInterview() {
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState(0);
     const [roundType, setRoundType] = useState('technical');
-    const [company, setCompany] = useState(null);
+    const [company, setCompany] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const cached = sessionStorage.getItem(`company_${companySlug}`);
+            if (cached) return JSON.parse(cached);
+        }
+        return null;
+    });
     const [elapsedSec, setElapsedSec] = useState(0);
     const [expandedQA, setExpandedQA] = useState({});
     const [copied, setCopied] = useState(false);
@@ -100,6 +106,7 @@ export default function MockInterview() {
                 const res = await fetch(`/api/companies/${companySlug}`);
                 if (res.ok) {
                     const data = await res.json();
+                    sessionStorage.setItem(`company_${companySlug}`, JSON.stringify(data));
                     setCompany(data);
                     // Default to first available interview round type
                     const available = INTERVIEW_ROUND_KEYS.filter(k =>
@@ -112,7 +119,9 @@ export default function MockInterview() {
                 }
             } catch { /* ignore */ }
             const name = companySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            setCompany({ id: companySlug, name, slug: companySlug });
+            const fallback = { id: companySlug, name, slug: companySlug };
+            setCompany(fallback);
+            sessionStorage.setItem(`company_${companySlug}`, JSON.stringify(fallback));
         }
         fetchCompany();
     }, [companySlug]);

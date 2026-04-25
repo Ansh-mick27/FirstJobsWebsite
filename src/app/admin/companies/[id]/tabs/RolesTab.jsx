@@ -1,11 +1,11 @@
 'use client';
-import { useState, useCallback } from 'react';
-import { Plus, Edit3, Trash2, ChevronDown, ChevronUp, Check, Save, BookOpen } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Edit3, Trash2, Check } from 'lucide-react';
 import ConfirmModal from '../../../../../components/admin/ConfirmModal';
 import { getAdminToken } from '../../../layout';
 
 const ROLE_ROUND_OPTIONS = [
-    { value: 'oa', label: 'Online Assessment' },
+    { value: 'oa', label: 'Verbal/Aptitude' },
     { value: 'technical', label: 'Technical' },
     { value: 'hr', label: 'HR' },
     { value: 'managerial', label: 'Managerial' },
@@ -46,31 +46,14 @@ function RoundChips({ selected, onChange }) {
 
 export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles }) {
     const [addOpen, setAddOpen] = useState(false);
-    const [addForm, setAddForm] = useState({ name: '', roundTypes: [], description: '' });
+    const [addForm, setAddForm] = useState({ name: '', roundTypes: [] });
     const [adding, setAdding] = useState(false);
 
     const [editId, setEditId] = useState(null);
     const [editForm, setEditForm] = useState({});
     const [editSaving, setEditSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
-    const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
-
-    const [expandedId, setExpandedId] = useState(null);
-    const [syllabusMap, setSyllabusMap] = useState({});
-
-    function getSyl(roleId) { return syllabusMap[roleId] || { topics: [], saving: false, msg: '' }; }
-    function setSyl(roleId, upd) { setSyllabusMap(p => ({ ...p, [roleId]: { ...getSyl(roleId), ...upd } })); }
-
-    function toggleExpand(role) {
-        if (expandedId === role.id) { setExpandedId(null); return; }
-        if (!syllabusMap[role.id]) {
-            const topics = role.syllabus?.topics?.length > 0
-                ? [...role.syllabus.topics]
-                : [{ name: '', description: '', studyHours: '' }];
-            setSyl(role.id, { topics, saving: false, msg: '' });
-        }
-        setExpandedId(role.id);
-    }
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     async function addRole() {
         if (!addForm.name.trim()) return;
@@ -80,7 +63,7 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
             headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminToken() },
             body: JSON.stringify(addForm),
         });
-        setAddForm({ name: '', roundTypes: [], description: '' });
+        setAddForm({ name: '', roundTypes: [] });
         setAddOpen(false);
         setAdding(false);
         fetchRoles();
@@ -108,19 +91,6 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
         fetchRoles();
     }
 
-    async function saveSyllabus(roleId) {
-        const syl = getSyl(roleId);
-        const topics = syl.topics.filter(t => t.name.trim());
-        setSyl(roleId, { saving: true, msg: '' });
-        const res = await fetch(`/api/admin/companies/${companyId}/roles/${roleId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminToken() },
-            body: JSON.stringify({ syllabus: { topics } }),
-        });
-        setSyl(roleId, { saving: false, msg: res.ok ? 'Saved ✓' : 'Error saving.' });
-        setTimeout(() => setSyl(roleId, { msg: '' }), 2500);
-    }
-
     return (
         <>
         <div style={{ padding: '2rem', maxWidth: '820px' }}>
@@ -128,7 +98,7 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                 <div>
                     <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>Job Roles</h2>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Each role can have its own hiring rounds and syllabus.</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Define roles and their hiring rounds. Manage syllabi separately in the Syllabus tab.</p>
                 </div>
                 <button onClick={() => setAddOpen(o => !o)} style={{
                     display: 'flex', alignItems: 'center', gap: '0.4rem',
@@ -150,10 +120,6 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
                     <div>
                         <Label>Hiring Rounds</Label>
                         <RoundChips selected={addForm.roundTypes} onChange={rt => setAddForm(p => ({ ...p, roundTypes: p.roundTypes.includes(rt) ? p.roundTypes.filter(r => r !== rt) : [...p.roundTypes, rt] }))} />
-                    </div>
-                    <div>
-                        <Label>Description (optional)</Label>
-                        <input value={addForm.description} onChange={e => setAddForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief note…" style={inp()} />
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={addRole} disabled={adding || !addForm.name.trim()} style={{
@@ -180,35 +146,44 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                     {roles.map(role => {
-                        const isExp = expandedId === role.id;
                         const isEdit = editId === role.id;
-                        const syl = getSyl(role.id);
 
                         return (
                             <div key={role.id} style={{
-                                background: 'var(--bg-surface)', border: `1px solid ${isExp ? 'rgba(255,45,85,0.35)' : 'var(--border)'}`,
-                                borderRadius: '12px', overflow: 'hidden', transition: 'border-color 0.2s',
+                                background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                                borderRadius: '12px', overflow: 'hidden',
                             }}>
-                                {/* Card header */}
+                                {/* Card */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1.1rem' }}>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         {isEdit ? (
-                                            <input value={editForm.name || ''} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} style={{ ...inp(), fontSize: '0.875rem' }} />
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                                                <div>
+                                                    <Label>Role Name</Label>
+                                                    <input value={editForm.name || ''} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} style={{ ...inp(), fontSize: '0.875rem' }} />
+                                                </div>
+                                                <div>
+                                                    <Label>Hiring Rounds</Label>
+                                                    <RoundChips selected={editForm.roundTypes || []} onChange={rt => setEditForm(p => ({ ...p, roundTypes: p.roundTypes.includes(rt) ? p.roundTypes.filter(r => r !== rt) : [...p.roundTypes, rt] }))} />
+                                                </div>
+                                            </div>
                                         ) : (
-                                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{role.name}</span>
+                                            <>
+                                                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{role.name}</span>
+                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '5px' }}>
+                                                    {(role.roundTypes || []).map(rt => (
+                                                        <span key={rt} style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,45,85,0.12)', color: 'var(--primary)', border: '1px solid rgba(255,45,85,0.25)' }}>
+                                                            {rt === 'oa' ? 'VERBAL/APTITUDE' : rt.toUpperCase()}
+                                                        </span>
+                                                    ))}
+                                                    {(role.roundTypes || []).length === 0 && (
+                                                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>No rounds set</span>
+                                                    )}
+                                                </div>
+                                            </>
                                         )}
-                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '5px' }}>
-                                            {(isEdit ? editForm.roundTypes : role.roundTypes || []).map(rt => (
-                                                <span key={rt} style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,45,85,0.12)', color: 'var(--primary)', border: '1px solid rgba(255,45,85,0.25)' }}>
-                                                    {rt.toUpperCase()}
-                                                </span>
-                                            ))}
-                                            {(isEdit ? editForm.roundTypes : role.roundTypes || []).length === 0 && (
-                                                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>No rounds set</span>
-                                            )}
-                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+                                    <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0, alignSelf: 'flex-start', marginTop: '2px' }}>
                                         {isEdit ? (
                                             <>
                                                 <button onClick={() => saveEdit(role.id)} disabled={editSaving} style={{ padding: '0.35rem 0.85rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
@@ -218,7 +193,7 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
                                             </>
                                         ) : (
                                             <>
-                                                <button onClick={() => { setEditId(role.id); setEditForm({ name: role.name, roundTypes: role.roundTypes || [], description: role.description || '' }); setExpandedId(role.id); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-muted)', padding: '0.3rem 0.55rem', cursor: 'pointer' }}>
+                                                <button onClick={() => { setEditId(role.id); setEditForm({ name: role.name, roundTypes: role.roundTypes || [] }); }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-muted)', padding: '0.3rem 0.55rem', cursor: 'pointer' }}>
                                                     <Edit3 size={13} />
                                                 </button>
                                                 <button onClick={() => setDeleteConfirm({ id: role.id, name: role.name })} disabled={deletingId === role.id} style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', color: 'var(--danger)', padding: '0.3rem 0.55rem', cursor: 'pointer', opacity: deletingId === role.id ? 0.5 : 1 }}>
@@ -226,58 +201,8 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
                                                 </button>
                                             </>
                                         )}
-                                        <button onClick={() => !isEdit && toggleExpand(role)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-muted)', padding: '0.3rem 0.55rem', cursor: 'pointer' }}>
-                                            {isExp ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                                        </button>
                                     </div>
                                 </div>
-
-                                {/* Expanded syllabus area */}
-                                {isExp && (
-                                    <div style={{ borderTop: '1px solid var(--border)', padding: '1rem 1.1rem 1.1rem' }}>
-                                        {isEdit && (
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <Label>Hiring Rounds</Label>
-                                                <RoundChips selected={editForm.roundTypes || []} onChange={rt => setEditForm(p => ({ ...p, roundTypes: p.roundTypes.includes(rt) ? p.roundTypes.filter(r => r !== rt) : [...p.roundTypes, rt] }))} />
-                                                <div style={{ marginTop: '0.75rem' }}>
-                                                    <Label>Description</Label>
-                                                    <input value={editForm.description || ''} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} style={inp()} />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                            <BookOpen size={14} style={{ color: 'var(--primary)' }} />
-                                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>Syllabus for {role.name}</span>
-                                        </div>
-
-                                        {/* Topic rows */}
-                                        {syl.topics.map((topic, idx) => (
-                                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 60px auto', gap: '0.4rem', marginBottom: '0.45rem', alignItems: 'center' }}>
-                                                {idx === 0 && <>
-                                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Topic</span>
-                                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Description</span>
-                                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Hrs</span>
-                                                    <span />
-                                                </>}
-                                                <input value={topic.name} onChange={e => setSyl(role.id, { topics: syl.topics.map((t, i) => i === idx ? { ...t, name: e.target.value } : t) })} placeholder="e.g. Data Structures" style={{ ...inp(), fontSize: '0.8rem' }} />
-                                                <input value={topic.description || ''} onChange={e => setSyl(role.id, { topics: syl.topics.map((t, i) => i === idx ? { ...t, description: e.target.value } : t) })} placeholder="What to cover…" style={{ ...inp(), fontSize: '0.8rem' }} />
-                                                <input type="number" min="0" value={topic.studyHours || ''} onChange={e => setSyl(role.id, { topics: syl.topics.map((t, i) => i === idx ? { ...t, studyHours: e.target.value } : t) })} placeholder="0" style={{ ...inp(), fontSize: '0.8rem' }} />
-                                                <button onClick={() => setSyl(role.id, { topics: syl.topics.filter((_, i) => i !== idx) })} style={{ background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '5px', color: 'var(--danger)', padding: '0.35rem 0.5rem', cursor: 'pointer' }}>✕</button>
-                                            </div>
-                                        ))}
-
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
-                                            <button onClick={() => setSyl(role.id, { topics: [...syl.topics, { name: '', description: '', studyHours: '' }] })} style={{ fontSize: '0.78rem', background: 'none', border: '1px dashed var(--border)', borderRadius: '6px', color: 'var(--primary)', padding: '0.35rem 0.75rem', cursor: 'pointer' }}>
-                                                + Add Topic
-                                            </button>
-                                            <button onClick={() => saveSyllabus(role.id)} disabled={syl.saving} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.9rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer', opacity: syl.saving ? 0.65 : 1 }}>
-                                                <Save size={12} /> {syl.saving ? 'Saving…' : 'Save Syllabus'}
-                                            </button>
-                                            {syl.msg && <span style={{ fontSize: '0.78rem', color: syl.msg.startsWith('Error') ? 'var(--danger)' : 'var(--success)' }}>{syl.msg}</span>}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         );
                     })}
@@ -289,7 +214,7 @@ export default function RolesTab({ companyId, roles, rolesLoading, fetchRoles })
             onClose={() => setDeleteConfirm(null)}
             onConfirm={() => deleteRole(deleteConfirm?.id)}
             title="Delete role?"
-            message={`This will permanently delete the "${deleteConfirm?.name}" role and its syllabus. Questions tagged to this role will remain but lose their role association.`}
+            message={`This will permanently delete the "${deleteConfirm?.name}" role. Questions tagged to this role will remain but lose their role association.`}
             loading={!!deletingId}
         />
         </>

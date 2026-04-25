@@ -102,7 +102,7 @@ export default function CompanyEditorPage() {
 
     // Lazy-load roles/questions on tab switch
     useEffect(() => {
-        if (tab === 'roles' && roles.length === 0 && !isNew) fetchRoles();
+        if ((tab === 'roles' || tab === 'syllabus') && roles.length === 0 && !isNew) fetchRoles();
         if (tab === 'questions' && questions.length === 0 && !isNew) fetchQuestions();
     }, [tab]);
 
@@ -255,11 +255,10 @@ export default function CompanyEditorPage() {
                 {!isNew && tab === 'syllabus' && (
                     <SyllabusTab
                         companyId={id}
-                        syllabus={syllabus}
-                        setSyllabus={setSyllabus}
-                        onSave={onSaveSyllabus}
-                        saving={syllSaving}
-                        saveMsg={syllMsg}
+                        companyName={form.name || company?.name || ''}
+                        roles={roles}
+                        setRoles={setRoles}
+                        rolesLoading={rolesLoading}
                     />
                 )}
                 {!isNew && tab === 'questions' && (

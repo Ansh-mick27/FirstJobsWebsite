@@ -98,7 +98,7 @@ export default function AdminLayout({ children }) {
                         </div>
                         <div>
                             <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                                PlacePrep Admin
+                                Paradox Admin
                             </div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Restricted access</div>
                         </div>
@@ -200,7 +200,7 @@ export default function AdminLayout({ children }) {
                         </div>
                         <div>
                             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)', display: 'block' }}>
-                                PlacePrep
+                                Paradox
                             </span>
                             <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                                 Admin Panel

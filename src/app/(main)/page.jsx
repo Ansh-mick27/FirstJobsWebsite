@@ -97,12 +97,14 @@ const RadarGrid = () => {
 };
 
 import styles from './page.module.css';
+import { useAuth } from '@/context/AuthContext';
 
 // lerp helper
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 export default function ParadoxLandingPage() {
+    const { user, loading } = useAuth();
     const canvasRef = useRef(null);
     const terminalRef = useRef(null);
     const [scrolled, setScrolled] = useState(false);
@@ -479,11 +481,18 @@ export default function ParadoxLandingPage() {
                 </div>
                 <div className={styles.navLinks}>
                     <Link href="/companies" className={styles.navLink}>Companies</Link>
-                    <Link href="/dashboard" className={styles.navLink}>Dashboard</Link>
                 </div>
                 <div className={styles.navActions}>
-                    <Link href="/login" className={styles.navLink}>Login</Link>
-                    <Link href="/signup" className={styles.navBtnStart}>Get Started &rarr;</Link>
+                    {!loading ? (
+                        user ? (
+                            <Link href="/dashboard" className={styles.navBtnStart}>Dashboard &rarr;</Link>
+                        ) : (
+                            <>
+                                <Link href="/login" className={styles.navLink}>Login</Link>
+                                <Link href="/signup" className={styles.navBtnStart}>Get Started &rarr;</Link>
+                            </>
+                        )
+                    ) : null}
                 </div>
             </nav>
 

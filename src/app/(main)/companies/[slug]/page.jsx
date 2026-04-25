@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, BrainCircuit, Terminal, BookOpen, Clock, LayoutList, ChevronLeft, Loader2 } from 'lucide-react';
 import StudyMaterial from '@/components/StudyMaterial';
@@ -19,14 +19,17 @@ export default function CompanyDetail() {
     // ─── ALL HOOKS FIRST — never below an early return ───────────────────────
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, loading: authLoading } = useAuth();
     const slug = params?.slug || '';
+
+    const initialRoleId = searchParams?.get('roleId') || '';
 
     const [activeTab, setActiveTab] = useState('study');
     const [company, setCompany] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [selectedRoleId, setSelectedRoleId] = useState('');  // '' = All Roles
+    const [selectedRoleId, setSelectedRoleId] = useState(initialRoleId);
 
     // Auth guard — redirect unauthenticated users to login
     useEffect(() => {
@@ -44,8 +47,13 @@ export default function CompanyDetail() {
     useEffect(() => {
         if (!slug) return;
         async function fetchCompany() {
-            setLoading(true);
-            setError('');
+            // Check session storage first (after mount)
+            const cached = sessionStorage.getItem(`company_${slug}`);
+            if (cached) {
+                setCompany(JSON.parse(cached));
+                setLoading(false);
+            }
+
             try {
                 const res = await fetch(`/api/companies/${slug}`);
                 if (!res.ok) {
@@ -53,12 +61,15 @@ export default function CompanyDetail() {
                     throw new Error('Failed to load company data');
                 }
                 const data = await res.json();
+                sessionStorage.setItem(`company_${slug}`, JSON.stringify(data));
                 setCompany(data);
+                setLoading(false);
             } catch (err) {
-                setError(err.message || 'Failed to load company data');
+                if (!cached) setError(err.message || 'Failed to load company data');
+                setLoading(false);
             }
-            setLoading(false);
         }
+        
         fetchCompany();
     }, [slug]);
 

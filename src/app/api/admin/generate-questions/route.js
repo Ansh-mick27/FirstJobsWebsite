@@ -50,14 +50,15 @@ export async function POST(request) {
     if (unauthorized) return unauthorized;
 
     try {
-        const { companyId, companyName, round, type, difficulty, count, seedQuestions } =
+        const { companyId, companyName, round, type, difficulty, count, seedQuestions, existingQuestions = [], roleId } =
             await request.json();
 
         if (!companyId || !companyName || !round || !type || !difficulty || !count) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const safeCount = Math.min(Math.max(parseInt(count) || 5, 1), 10);
+        // Raise ceiling to 20
+        const safeCount = Math.min(Math.max(parseInt(count) || 5, 1), 20);
 
         const seedContext =
             seedQuestions?.length > 0
@@ -65,6 +66,11 @@ export async function POST(request) {
                     .map((q, i) => `${i + 1}. ${q}`)
                     .join('\n')}\n\nGenerate questions in the SAME style, difficulty, and topic area.`
                 : `Generate ${round.toUpperCase()} round questions typically asked by ${companyName} in Indian campus placements.`;
+
+        // Dedup: inject existing question texts so AI avoids them
+        const dedupContext = existingQuestions.length > 0
+            ? `\n\nIMPORTANT — The following questions already exist in the database. Do NOT generate any question that is similar or duplicate to these:\n${existingQuestions.slice(0, 40).map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nAll generated questions must be DIFFERENT and non-overlapping with the above.`
+            : '';
 
         const typeInstructions = {
             mcq: `Return a JSON object with a "questions" array. Each item has:
@@ -88,7 +94,7 @@ export async function POST(request) {
 
         const prompt = `You are an expert placement preparation question creator for Indian campus placements.
 
-${seedContext}
+${seedContext}${dedupContext}
 
 Generate exactly ${safeCount} ${difficulty} difficulty ${type} questions for the ${round.toUpperCase()} round of ${companyName}.
 

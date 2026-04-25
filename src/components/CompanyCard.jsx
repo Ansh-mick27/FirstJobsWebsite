@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import styles from './CompanyCard.module.css';
 
-export default function CompanyCard({ company }) {
+export default function CompanyCard({ company, onClick, isLoading }) {
     // Default mock data if no company provided
     const data = company || {
         name: 'Google',
@@ -14,8 +14,8 @@ export default function CompanyCard({ company }) {
 
     const initialLetter = data.name.charAt(0).toUpperCase();
 
-    return (
-        <Link href={`/companies/${data.slug}`} className={styles.card}>
+    const CardContent = (
+        <>
             <div className={styles.header}>
                 <div className={styles.logoBox}>
                     {initialLetter}
@@ -45,9 +45,23 @@ export default function CompanyCard({ company }) {
 
             <div className={styles.footer}>
                 <span className={styles.prepareText}>
-                    Prepare <span className={styles.arrow}>→</span>
+                    {isLoading ? 'Loading...' : <>Prepare <span className={styles.arrow}>→</span></>}
                 </span>
             </div>
+        </>
+    );
+
+    if (onClick) {
+        return (
+            <div onClick={onClick} className={styles.card} role="button" tabIndex={0} style={{ cursor: 'pointer', opacity: isLoading ? 0.7 : 1 }}>
+                {CardContent}
+            </div>
+        );
+    }
+
+    return (
+        <Link href={`/companies/${data.slug}`} className={styles.card}>
+            {CardContent}
         </Link>
     );
 }

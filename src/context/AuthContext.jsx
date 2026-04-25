@@ -20,8 +20,13 @@ export function AuthProvider({ children }) {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 setUser(firebaseUser);
-                const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-                setProfile(profileDoc.exists() ? profileDoc.data() : null);
+                try {
+                    const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+                    setProfile(profileDoc.exists() ? profileDoc.data() : null);
+                } catch (err) {
+                    console.error("Failed to fetch user profile, possibly blocked by client:", err);
+                    setProfile(null);
+                }
             } else {
                 setUser(null);
                 setProfile(null);

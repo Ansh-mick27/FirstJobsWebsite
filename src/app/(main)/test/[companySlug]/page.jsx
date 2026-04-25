@@ -326,7 +326,7 @@ export default function MockTest() {
                                         className={`${styles.toggleBtn} ${roundType === 'oa' ? styles.toggleActive : ''}`}
                                         onClick={() => setRoundType('oa')}
                                     >
-                                        Online Assessment
+                                        Verbal/Aptitude
                                     </button>
                                 )}
                                 {allowedTestRounds.includes('technical') && (
@@ -495,7 +495,7 @@ export default function MockTest() {
                         <X size={18} />
                     </button>
                     <h2>{company?.name || companySlug.toUpperCase()}</h2>
-                    <span className={styles.roundPill}>{roundType === 'oa' ? 'Online Assessment' : 'Technical Round'}</span>
+                    <span className={styles.roundPill}>{roundType === 'oa' ? 'Verbal/Aptitude' : 'Technical Round'}</span>
                 </div>
                 <div className={styles.timerBox}>
                     <span className={`${styles.timerText} ${timerColorClass}`}>

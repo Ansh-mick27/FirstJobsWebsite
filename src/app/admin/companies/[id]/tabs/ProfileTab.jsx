@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Check, Save, X } from 'lucide-react';
+import { Check, Save, X, Sparkles, Loader } from 'lucide-react';
+import { getAdminToken } from '../../../layout';
 
 const INDUSTRIES = ['IT Services', 'Product', 'Consulting', 'BFSI', 'Core', 'Other'];
 
@@ -21,6 +22,8 @@ const Label = ({ children }) => (
 
 export default function ProfileTab({ form, setFormField, saving, saveMsg, onSave }) {
     const [tagInput, setTagInput] = useState('');
+    const [generating, setGenerating] = useState(false);
+    const [genError, setGenError] = useState('');
 
     function addTag(e) {
         if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
@@ -31,17 +34,73 @@ export default function ProfileTab({ form, setFormField, saving, saveMsg, onSave
         }
     }
 
+    async function handleGenerate() {
+        if (!form.name.trim()) { setGenError('Enter a company name first.'); return; }
+        setGenerating(true); setGenError('');
+        try {
+            const res = await fetch('/api/admin/generate-company-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminToken() },
+                body: JSON.stringify({ companyName: form.name.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Generation failed');
+            if (data.industry) setFormField('industry', data.industry);
+            if (data.description) setFormField('description', data.description);
+            if (data.tags?.length) setFormField('tags', data.tags);
+            if (data.rounds) setFormField('rounds', data.rounds);
+        } catch (err) {
+            setGenError(err.message || 'AI generation failed. Try again.');
+        }
+        setGenerating(false);
+    }
+
     return (
         <div style={{ padding: '2rem', maxWidth: '680px' }}>
             <form onSubmit={onSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {/* Name */}
+                {/* Name + AI button */}
                 <div>
                     <Label>Company Name *</Label>
-                    <input value={form.name} onChange={e => setFormField('name', e.target.value)} style={inp(false)} />
-                    {form.name && (
-                        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-                            Slug: <code style={{ color: 'var(--primary)' }}>{generateSlug(form.name)}</code>
-                        </p>
+                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                            <input
+                                value={form.name}
+                                onChange={e => { setFormField('name', e.target.value); setGenError(''); }}
+                                placeholder="e.g. Infosys, Google, Zomato"
+                                style={inp(false)}
+                            />
+                            {form.name && (
+                                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                                    Slug: <code style={{ color: 'var(--primary)' }}>{generateSlug(form.name)}</code>
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleGenerate}
+                            disabled={generating || !form.name.trim()}
+                            title="Auto-fill fields using AI"
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                padding: '0.72rem 1rem', whiteSpace: 'nowrap',
+                                background: generating ? 'var(--bg-elevated)' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                                color: generating ? 'var(--text-muted)' : '#fff',
+                                border: generating ? '1px solid var(--border)' : '1px solid transparent',
+                                borderRadius: '8px', fontWeight: 600, fontSize: '0.82rem',
+                                cursor: generating || !form.name.trim() ? 'not-allowed' : 'pointer',
+                                opacity: !form.name.trim() ? 0.5 : 1,
+                                transition: 'all 0.15s',
+                                flexShrink: 0,
+                            }}
+                        >
+                            {generating
+                                ? <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</>
+                                : <><Sparkles size={14} /> AI Autofill</>
+                            }
+                        </button>
+                    </div>
+                    {genError && (
+                        <p style={{ fontSize: '0.78rem', color: 'var(--danger)', marginTop: '0.4rem' }}>⚠ {genError}</p>
                     )}
                 </div>
 
@@ -90,7 +149,7 @@ export default function ProfileTab({ form, setFormField, saving, saveMsg, onSave
                 <div>
                     <Label>Interview Rounds</Label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {[['oa', 'Online Assessment'], ['technical', 'Technical'], ['hr', 'HR']].map(([k, l]) => (
+                        {[['oa', 'Verbal/Aptitude'], ['technical', 'Technical'], ['hr', 'HR']].map(([k, l]) => (
                             <button key={k} type="button" onClick={() => setFormField('rounds', { ...form.rounds, [k]: !form.rounds[k] })} style={{
                                 display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.45rem 0.85rem',
                                 cursor: 'pointer', fontSize: '0.8rem', borderRadius: '7px',
@@ -139,6 +198,8 @@ export default function ProfileTab({ form, setFormField, saving, saveMsg, onSave
                     )}
                 </div>
             </form>
+
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 }
