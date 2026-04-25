@@ -1268,3 +1268,56 @@
     background: rgba(139, 92, 246, 0.16);
     box-shadow: 0 0 14px rgba(139, 92, 246, 0.2);
 }
+/* ─── Gemini Live: new classes ───────────────────────────────────────────────── */
+
+/* Live indicator shown when mic is active */
+.liveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #ef4444;
+    animation: livePulse 1.5s ease infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* Streaming transcript cursor blink */
+.streamCursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--primary-bright);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Streaming bubble — slightly dimmed while partial */
+.bubbleStreaming {
+    opacity: 0.85;
+}
+
+/* Error banner in chat */
+.errorBanner {
+    align-self: center;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 0.82rem;
+    padding: 10px 16px;
+    max-width: 80%;
+    text-align: center;
+}
