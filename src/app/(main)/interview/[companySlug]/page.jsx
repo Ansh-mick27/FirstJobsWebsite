@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Mic, MicOff, Send, X, Volume2, VolumeX, Bot, ChevronLeft, ChevronDown, ChevronUp, Clock, StopCircle, RefreshCw, Share2, CheckCircle, Radio } from 'lucide-react';
+import { Mic, MicOff, Send, X, Volume2, VolumeX, Bot, ChevronLeft, ChevronDown, ChevronUp, Clock, StopCircle, RefreshCw, Share2, CheckCircle, Radio, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
@@ -26,6 +26,12 @@ function scoreRingColor(score) {
     if (score >= 8) return { stroke: '#10b981', glow: 'rgba(16,185,129,0.4)' };
     if (score >= 5) return { stroke: '#f59e0b', glow: 'rgba(245,158,11,0.4)' };
     return { stroke: '#ef4444', glow: 'rgba(239,68,68,0.4)' };
+}
+
+function commScoreColor(s) {
+    if (s >= 8) return '#10b981';
+    if (s >= 5) return '#38bdf8';
+    return '#f59e0b';
 }
 
 const LOADING_STEPS = [
@@ -93,6 +99,7 @@ const INITIAL_INTERVIEW_STATE = {
     isConnected: false,
     isInterviewerSpeaking: false,
     isComplete: false,
+    hesitations: [],     // [{ questionIndex, delaySeconds }] from server
 };
 
 function interviewReducer(state, action) {
@@ -106,13 +113,20 @@ function interviewReducer(state, action) {
         case 'AI_AUDIO':
             return { ...state, isInterviewerSpeaking: true };
         case 'TURN_COMPLETE': {
-            const msgs = state.partialAi.trim()
-                ? [...state.messages, { role: 'assistant', content: state.partialAi.trim() }]
-                : state.messages;
-            return { ...state, messages: msgs, partialAi: '', isInterviewerSpeaking: false, questionCount: state.questionCount + 1 };
+            // Flush any uncommitted user speech first (inputTranscription.finished may never arrive)
+            let msgs = state.messages;
+            if (state.partialUser.trim()) {
+                msgs = [...msgs, { role: 'user', content: state.partialUser.trim() }];
+            }
+            if (state.partialAi.trim()) {
+                msgs = [...msgs, { role: 'assistant', content: state.partialAi.trim() }];
+            }
+            return { ...state, messages: msgs, partialAi: '', partialUser: '', isInterviewerSpeaking: false, questionCount: state.questionCount + 1 };
         }
         case 'INTERRUPTED':
-            return { ...state, isInterviewerSpeaking: false };
+            return { ...state, isInterviewerSpeaking: false, partialAi: '' };
+        case 'RECONNECTING':
+            return { ...state, isConnected: false, partialAi: '', partialUser: '' };
         case 'USER_TRANSCRIPT_CHUNK':
             return { ...state, partialUser: state.partialUser + action.text };
         case 'USER_TRANSCRIPT_DONE': {
@@ -127,6 +141,7 @@ function interviewReducer(state, action) {
                 ...state,
                 messages: action.messages || state.messages,
                 sessionId: action.sessionId || state.sessionId,
+                hesitations: action.hesitations || state.hesitations,
                 partialAi: '',
                 partialUser: '',
                 isComplete: true,
@@ -144,7 +159,7 @@ function interviewReducer(state, action) {
 export default function MockInterview() {
     const params = useParams();
     const router = useRouter();
-    const { user, loading: authLoading } = useAuth();
+    const { user, profile, loading: authLoading } = useAuth();
     const companySlug = params?.companySlug || 'company';
     const searchParams = useSearchParams();
     const roleId = searchParams?.get('roleId') || null;
@@ -165,16 +180,12 @@ export default function MockInterview() {
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState(0);
     const [roundType, setRoundType] = useState('technical');
-    const [company, setCompany] = useState(() => {
-        if (typeof window !== 'undefined') {
-            const cached = sessionStorage.getItem(`company_${companySlug}`);
-            if (cached) return JSON.parse(cached);
-        }
-        return null;
-    });
+    const [company, setCompany] = useState(null);
     const [elapsedSec, setElapsedSec] = useState(0);
     const [expandedQA, setExpandedQA] = useState({});
+    const [expandedExpected, setExpandedExpected] = useState({});
     const [copied, setCopied] = useState(false);
+    const [isUserSpeaking, setIsUserSpeaking] = useState(false);
     const [textInput, setTextInput] = useState('');
     const [connectionError, setConnectionError] = useState('');
 
@@ -198,10 +209,31 @@ export default function MockInterview() {
     // Store partial texts in refs so WS callbacks see current values without stale closure
     const partialAiRef = useRef('');
     const partialUserRef = useRef('');
+    // Reconnection
+    const reconnectAttemptsRef = useRef(0);
+    const reconnectFnRef = useRef(null);   // holds latest reconnectInterview fn
+    const messagesRef = useRef([]);        // mirrors iv.messages for use in WS callbacks
+    // Auto-mute mic while AI speaks (prevents echo feedback to Gemini)
+    const aiSpeakingMuteRef = useRef(false);
+    // User speaking detection
+    const isUserSpeakingRef = useRef(false);
+    const userSpeakingTimeoutRef = useRef(null);
 
     // Sync mute refs
     useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
-    useEffect(() => { isMicMutedRef.current = isMicMuted; }, [isMicMuted]);
+    useEffect(() => {
+        isMicMutedRef.current = isMicMuted;
+        if (isMicMuted) setIsUserSpeaking(false);
+    }, [isMicMuted]);
+    useEffect(() => { messagesRef.current = iv.messages; }, [iv.messages]);
+
+    // ── Restore company from sessionStorage (client only, avoids SSR mismatch) ──
+    useEffect(() => {
+        const cached = sessionStorage.getItem(`company_${companySlug}`);
+        if (cached) {
+            try { setCompany(JSON.parse(cached)); } catch { /* ignore corrupt cache */ }
+        }
+    }, [companySlug]);
 
     // ── Company fetch ─────────────────────────────────────────────────────────
     useEffect(() => {
@@ -343,9 +375,29 @@ export default function MockInterview() {
         processor.connect(ctx.destination); // must be connected to fire onaudioprocess
 
         processor.onaudioprocess = (e) => {
-            if (isMicMutedRef.current) return;
-            if (!ws || ws.readyState !== WebSocket.OPEN) return;
             const float32 = e.inputBuffer.getChannelData(0);
+
+            // RMS-based user speaking detection (runs regardless of mute state)
+            if (!isMicMutedRef.current && !aiSpeakingMuteRef.current) {
+                let sum = 0;
+                for (let i = 0; i < float32.length; i++) sum += float32[i] * float32[i];
+                const rms = Math.sqrt(sum / float32.length);
+                if (rms > 0.008) {
+                    if (!isUserSpeakingRef.current) {
+                        isUserSpeakingRef.current = true;
+                        setIsUserSpeaking(true);
+                    }
+                    clearTimeout(userSpeakingTimeoutRef.current);
+                    userSpeakingTimeoutRef.current = setTimeout(() => {
+                        isUserSpeakingRef.current = false;
+                        setIsUserSpeaking(false);
+                    }, 400);
+                }
+            }
+
+            // Gate: don't send audio while user-muted or AI is speaking (echo prevention)
+            if (isMicMutedRef.current || aiSpeakingMuteRef.current) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
             const pcm = downsampleAndEncode(float32, ctx.sampleRate, 16000);
             const b64 = arrayBufferToBase64(pcm);
             ws.send(JSON.stringify({ type: 'audio', data: b64 }));
@@ -373,8 +425,17 @@ export default function MockInterview() {
                 dispatch({ type: 'CONNECTED' });
                 setIsLoading(false);
                 setConnectionError('');
+                // On reconnect, replay conversation history so AI has context
+                if (reconnectAttemptsRef.current > 0 && messagesRef.current.length > 0) {
+                    wsRef.current?.send(JSON.stringify({ type: 'history', messages: messagesRef.current }));
+                }
                 break;
             case 'audio':
+                // Mute mic while AI speaks — prevents echo reaching Gemini's VAD
+                aiSpeakingMuteRef.current = true;
+                isUserSpeakingRef.current = false;
+                setIsUserSpeaking(false);
+                clearTimeout(userSpeakingTimeoutRef.current);
                 scheduleAudioChunk(msg.data, msg.mimeType);
                 dispatch({ type: 'AI_AUDIO' });
                 break;
@@ -384,10 +445,16 @@ export default function MockInterview() {
                 break;
             case 'turnComplete':
                 partialAiRef.current = '';
+                // Unmute mic now that AI has finished speaking
+                aiSpeakingMuteRef.current = false;
                 dispatch({ type: 'TURN_COMPLETE' });
                 break;
             case 'interrupted':
                 partialAiRef.current = '';
+                // Unmute mic (user barged in, AI stopped)
+                aiSpeakingMuteRef.current = false;
+                // Flush scheduled audio so leftover AI speech doesn't play after barge-in
+                nextPlayTimeRef.current = playCtxRef.current?.currentTime ?? 0;
                 dispatch({ type: 'INTERRUPTED' });
                 break;
             case 'userTranscript':
@@ -402,15 +469,33 @@ export default function MockInterview() {
                 }
                 break;
             case 'interviewComplete':
-                dispatch({ type: 'INTERVIEW_COMPLETE', sessionId: msg.sessionId, messages: msg.messages });
+                dispatch({ type: 'INTERVIEW_COMPLETE', sessionId: msg.sessionId, messages: msg.messages, hesitations: msg.hesitations || [] });
                 setIsInterviewDone(true);
                 stopMic();
                 break;
-            case 'geminiClosed':
+            case 'geminiClosed': {
+                console.error('[Interview WS] Gemini closed:', msg.code, msg.reason || '(no reason)');
+                const isRecoverable = msg.code !== 1000 && msg.code !== 1008;
+                if (isRecoverable && reconnectAttemptsRef.current < 2) {
+                    reconnectAttemptsRef.current++;
+                    setConnectionError('');
+                    setIsLoading(true);
+                    dispatch({ type: 'RECONNECTING' });
+                    setTimeout(() => reconnectFnRef.current?.(), 2000);
+                } else {
+                    const closeMsg = msg.reason
+                        || `AI service closed (code ${msg.code ?? '?'}). Check GOOGLE_API_KEY and model name in server logs.`;
+                    setConnectionError(closeMsg);
+                    setIsLoading(false);
+                    stopMic();
+                }
+                break;
+            }
             case 'error':
-                console.error('[Interview WS] Server error:', msg.message);
-                setConnectionError(msg.message || 'Connection lost.');
+                console.error('[Interview WS] Error:', msg.message);
+                setConnectionError(msg.message || 'Connection error. Please retry.');
                 setIsLoading(false);
+                stopMic();
                 break;
         }
     }, [scheduleAudioChunk, stopMic]);
@@ -438,6 +523,7 @@ export default function MockInterview() {
                     userId: user?.uid || null,
                     companyId: company?.id || companySlug,
                     companyName: company?.name || companySlug,
+                    userName: profile?.name || null,
                 }),
             });
             if (!res.ok) throw new Error(`Session init failed: ${res.status}`);
@@ -481,6 +567,59 @@ export default function MockInterview() {
         }
     }
 
+    // ── Reconnect interview after transient disconnect ────────────────────────
+    async function reconnectInterview() {
+        setIsLoading(true);
+        setConnectionError('');
+        try {
+            const res = await fetch('/api/interview-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    companySlug,
+                    roleId,
+                    roundType,
+                    userId: user?.uid || null,
+                    companyId: company?.id || companySlug,
+                    companyName: company?.name || companySlug,
+                    userName: profile?.name || null,
+                }),
+            });
+            if (!res.ok) throw new Error(`Session init failed: ${res.status}`);
+            const { sessionToken } = await res.json();
+
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${proto}//${window.location.host}/ws/interview?token=${encodeURIComponent(sessionToken)}`;
+            const ws = new WebSocket(wsUrl);
+            wsRef.current = ws;
+
+            ws.onmessage = (event) => {
+                try { handleWsMessage(JSON.parse(event.data)); } catch (e) { console.error('[WS parse]', e); }
+            };
+            ws.onerror = () => {
+                setConnectionError('Reconnection failed. Please reload and try again.');
+                setIsLoading(false);
+            };
+            ws.onclose = () => { stopMic(); };
+            ws.onopen = async () => {
+                try {
+                    stopMic(); // stop any lingering mic
+                    await startMic(ws);
+                } catch (err) {
+                    setConnectionError('Microphone access denied.');
+                    setIsLoading(false);
+                    ws.close();
+                }
+            };
+        } catch (err) {
+            console.error('[reconnectInterview]', err);
+            setConnectionError('Reconnection failed. Please reload and try again.');
+            setIsLoading(false);
+        }
+    }
+    // Keep ref current so handleWsMessage (stale closure) can always call the latest version
+    reconnectFnRef.current = reconnectInterview;
+
     // ── Send text fallback ────────────────────────────────────────────────────
     function sendText() {
         if (!textInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
@@ -514,7 +653,7 @@ export default function MockInterview() {
                     messages: iv.messages,
                     roundType,
                     companyName: company?.name || companySlug,
-                    hesitations: [],
+                    hesitations: iv.hesitations,
                 }),
             });
             const data = await res.json();
@@ -552,7 +691,62 @@ export default function MockInterview() {
         });
     }
 
-    const lastAiMessage = iv.messages.filter(m => m.role === 'assistant').at(-1)?.content || iv.partialAi || '';
+    function downloadReport() {
+        if (!feedback) return;
+        const lines = [
+            `===== Interview Report =====`,
+            `Company:  ${company?.name || companySlug}`,
+            `Round:    ${roundType}`,
+            `Date:     ${new Date().toLocaleDateString()}`,
+            `Score:    ${feedback.score}/10`,
+            `Decision: ${feedback.hiringDecision}`,
+            ``,
+            `--- Overall Summary ---`,
+            feedback.overallSummary || '',
+            ``,
+        ];
+        if (feedback.communicationScore != null) {
+            lines.push(`--- Communication & Delivery ---`);
+            lines.push(`Score: ${feedback.communicationScore}/10`);
+            if (feedback.communicationFeedback) lines.push(feedback.communicationFeedback);
+            lines.push('');
+        }
+        if (feedback.strengths?.length) {
+            lines.push(`--- Strengths ---`);
+            feedback.strengths.forEach(s => lines.push(`  • ${s}`));
+            lines.push('');
+        }
+        if (feedback.weaknesses?.length) {
+            lines.push(`--- Areas to Improve ---`);
+            feedback.weaknesses.forEach(w => lines.push(`  • ${w}`));
+            lines.push('');
+        }
+        if (feedback.suggestions?.length) {
+            lines.push(`--- Suggestions ---`);
+            feedback.suggestions.forEach(s => lines.push(`  • ${s}`));
+            lines.push('');
+        }
+        if (feedback.questionBreakdown?.length) {
+            lines.push(`--- Question Breakdown ---`);
+            const userMessages = iv.messages.filter(m => m.role === 'user');
+            feedback.questionBreakdown.forEach((qa, i) => {
+                lines.push(``, `Q${i + 1}: ${qa.question || ''}`);
+                const answer = userMessages[i]?.content;
+                if (answer) lines.push(`Your Answer: ${answer}`);
+                lines.push(`Rating: ${qa.rating || '?'}/5`);
+                if (qa.comment) lines.push(`Feedback: ${qa.comment}`);
+                if (qa.expectedAnswer) lines.push(`Expected Answer: ${qa.expectedAnswer}`);
+            });
+        }
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `interview-${companySlug}-${roundType}-${new Date().toISOString().slice(0, 10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     const maxQ = iv.maxQuestions || (roundType === 'technical' ? 10 : 7);
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -671,6 +865,19 @@ export default function MockInterview() {
                                     Hiring Recommendation: <strong>{feedback.hiringDecision}</strong>
                                 </div>
                             )}
+                            {feedback.previousScores?.length > 0 && (
+                                <div className={styles.trendBar}>
+                                    <span className={styles.trendLabel}>Your Progress</span>
+                                    <div className={styles.trendDots}>
+                                        {feedback.previousScores.map((s, i) => (
+                                            <span key={i} className={styles.trendDot} style={{ color: scoreRingColor(s).stroke }}>{s}</span>
+                                        ))}
+                                        <span className={styles.trendArrow}>→</span>
+                                        <span className={styles.trendDotCurrent} style={{ color: ringColor.stroke }}>{feedback.score}</span>
+                                        <span className={styles.trendNow}>(now)</span>
+                                    </div>
+                                </div>
+                            )}
                             <div className={styles.scoreRingWrapper}>
                                 <svg width="140" height="140" viewBox="0 0 120 120" className={styles.scoreRingSvg}>
                                     <circle cx="60" cy="60" r="54" className={styles.ringTrack} />
@@ -701,6 +908,20 @@ export default function MockInterview() {
                                     {feedback.suggestions.map((s, i) => <div key={i} className={styles.feedbackItem}>{s}</div>)}
                                 </div>
                             )}
+                            {feedback.communicationScore != null && (
+                                <div className={styles.feedbackSection}>
+                                    <h3>🎤 Communication & Delivery</h3>
+                                    <div className={styles.commScoreCard}>
+                                        <div className={styles.commScoreLeft}>
+                                            <span className={styles.commScoreNum} style={{ color: commScoreColor(feedback.communicationScore) }}>
+                                                {feedback.communicationScore}/10
+                                            </span>
+                                            <span className={styles.commScoreLabel}>Delivery</span>
+                                        </div>
+                                        <p className={styles.commScoreFeedback}>{feedback.communicationFeedback}</p>
+                                    </div>
+                                </div>
+                            )}
                             {feedback.questionBreakdown?.length > 0 && (
                                 <div className={styles.feedbackSection}>
                                     <h3>🎯 Question Breakdown</h3>
@@ -726,6 +947,22 @@ export default function MockInterview() {
                                                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className={styles.qaCardBody}>
                                                             {userAnswer && <div className={styles.qaUserAnswer}><span className={styles.qaAnswerLabel}>Your answer:</span><p>{userAnswer}</p></div>}
                                                             {qa.comment && <p className={styles.qaComment}>{qa.comment}</p>}
+                                                            {qa.expectedAnswer && (
+                                                                <>
+                                                                    <button className={styles.qaExpectedToggle} onClick={e => { e.stopPropagation(); setExpandedExpected(prev => ({ ...prev, [i]: !prev[i] })); }}>
+                                                                        💡 {expandedExpected[i] ? 'Hide' : 'See'} Expected Answer
+                                                                        {expandedExpected[i] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                                                    </button>
+                                                                    <AnimatePresence>
+                                                                        {expandedExpected[i] && (
+                                                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className={styles.qaExpectedAnswer}>
+                                                                                <span className={styles.qaAnswerLabel}>Expected Answer</span>
+                                                                                <p>{qa.expectedAnswer}</p>
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </AnimatePresence>
+                                                                </>
+                                                            )}
                                                         </motion.div>
                                                     )}
                                                 </AnimatePresence>
@@ -740,6 +977,9 @@ export default function MockInterview() {
                                 </button>
                                 <button className={styles.btnShare} onClick={shareResults}>
                                     {copied ? <><CheckCircle size={15} /> Copied!</> : <><Share2 size={15} /> Share Results</>}
+                                </button>
+                                <button className={styles.btnDownload} onClick={downloadReport}>
+                                    <Download size={15} /> Download Report
                                 </button>
                                 <button className={styles.btnSecondary} onClick={() => router.push(`/companies/${companySlug}`)}>
                                     Back to Company
@@ -820,10 +1060,6 @@ export default function MockInterview() {
                         <span className={styles.roundBadge}>
                             {ROUND_TYPES.find(r => r.value === roundType)?.label || roundType} Round
                         </span>
-                        <div className={styles.avatarLogoBox}>
-                            {(company?.name || companySlug).charAt(0).toUpperCase()}
-                        </div>
-                        <span className={styles.companyNameLabel}>{company?.name || companySlug}</span>
                     </div>
 
                     <div className={styles.avatarArea}>
@@ -845,7 +1081,6 @@ export default function MockInterview() {
                             ))}
                         </div>
 
-                        <h3 className={styles.agentName}>AI Interviewer</h3>
                         <p className={styles.agentStatus}>{agentStatus}</p>
 
                         {iv.isConnected && !isMicMuted && !isInterviewDone && (
@@ -855,22 +1090,27 @@ export default function MockInterview() {
                             </div>
                         )}
 
-                        <div className={styles.qCounter}>
-                            Q {iv.questionCount} <span>/ {roundType === 'technical' ? '~10' : '~7'}</span>
-                        </div>
                     </div>
 
-                    {lastAiMessage && (
-                        <div className={styles.lastQuestionBox}>
-                            <div className={styles.lastQuestionLabel}>Current Question</div>
-                            <p className={styles.lastQuestionText}>{lastAiMessage}</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Chat Panel */}
                 <div className={styles.chatPanel}>
                     <div className={styles.chatHistory}>
+                        {/* Show while connected but before AI's first word */}
+                        <AnimatePresence>
+                            {iv.isConnected && iv.messages.length === 0 && !iv.partialAi && !iv.partialUser && (
+                                <motion.div
+                                    key="greeting-banner"
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className={styles.greetingBanner}
+                                >
+                                    Your interviewer will greet you shortly…
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                         <AnimatePresence initial={false}>
                             {iv.messages.map((msg, i) => (
                                 <motion.div
@@ -880,28 +1120,25 @@ export default function MockInterview() {
                                     transition={{ duration: 0.25 }}
                                     className={`${styles.chatBubble} ${msg.role === 'assistant' ? styles.bubbleAi : styles.bubbleUser}`}
                                 >
-                                    {msg.role === 'assistant' && <div className={styles.bubbleAvatar}><Bot size={14} /></div>}
                                     <div className={styles.bubbleContent}>{msg.content}</div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
 
-                        {/* Streaming partial transcripts */}
-                        {iv.partialAi && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`${styles.chatBubble} ${styles.bubbleAi} ${styles.bubbleStreaming}`}>
-                                <div className={styles.bubbleAvatar}><Bot size={14} /></div>
-                                <div className={styles.bubbleContent}>{iv.partialAi}<span className={styles.streamCursor} /></div>
-                            </motion.div>
-                        )}
+                        {/* Streaming partial transcripts — user first so their bubble always sits above AI's reply */}
                         {iv.partialUser && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`${styles.chatBubble} ${styles.bubbleUser} ${styles.bubbleStreaming}`}>
                                 <div className={styles.bubbleContent}>{iv.partialUser}<span className={styles.streamCursor} /></div>
                             </motion.div>
                         )}
+                        {iv.partialAi && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`${styles.chatBubble} ${styles.bubbleAi} ${styles.bubbleStreaming}`}>
+                                <div className={styles.bubbleContent}>{iv.partialAi}<span className={styles.streamCursor} /></div>
+                            </motion.div>
+                        )}
 
                         {isLoading && (
                             <div className={`${styles.chatBubble} ${styles.bubbleAi}`}>
-                                <div className={styles.bubbleAvatar}><Bot size={14} /></div>
                                 <div className={styles.typingIndicator}><span /><span /><span /></div>
                             </div>
                         )}
@@ -922,6 +1159,17 @@ export default function MockInterview() {
                         )}
                         {!isInterviewDone && (
                             <div className={styles.inputBox}>
+                                {iv.isConnected && !isMicMuted && (
+                                    <div className={styles.userWaveform} title="Microphone active">
+                                        {[...Array(5)].map((_, i) => (
+                                            <div
+                                                key={i}
+                                                className={`${styles.userWaveBar} ${isUserSpeaking ? styles.userWaveBarActive : ''}`}
+                                                style={{ animationDelay: `${i * 0.12}s` }}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                                 <div className={styles.textareaWrapper}>
                                     <textarea
                                         ref={textareaRef}

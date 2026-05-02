@@ -16,7 +16,9 @@ const GEMINI_LIVE_HOST = 'generativelanguage.googleapis.com';
 const GEMINI_LIVE_PATH = '/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
 
 function getGeminiUrl() {
-    return `wss://${GEMINI_LIVE_HOST}${GEMINI_LIVE_PATH}?key=${process.env.GOOGLE_API_KEY}`;
+    const key = process.env.GOOGLE_API_KEY;
+    if (!key) throw new Error('GOOGLE_API_KEY is not set in .env.local');
+    return `wss://${GEMINI_LIVE_HOST}${GEMINI_LIVE_PATH}?key=${key}`;
 }
 
 function getSessionSecret() {
@@ -56,13 +58,14 @@ async function handleInterviewWs(ws, req, adminDb) {
         messages: [],
         sessionId: null,
         hesitations: [],
-        aiTurnEndAt: null,      // timestamp when AI last finished speaking (for hesitation calc)
-        userAudioStarted: false, // first audio chunk received after AI turn
-        currentAiText: '',       // accumulates output transcription text
-        currentUserText: '',     // accumulates input transcription text
+        aiTurnEndAt: null,        // timestamp when AI last finished speaking (for hesitation calc)
+        userAudioStarted: false,  // first audio chunk received after AI turn
+        currentAiText: '',        // accumulates output transcription text
+        currentUserText: '',      // accumulates input transcription text
         isComplete: false,
         geminiReady: false,
-        pendingQueue: [],        // audio messages queued before Gemini setup completes
+        pendingQueue: [],         // audio messages queued before Gemini setup completes
+        silenceNudgeTimer: null,  // setTimeout handle for 15s silence nudge
     };
 
     // Create Firestore session document upfront so we have an ID to send to the client.
@@ -92,22 +95,42 @@ async function handleInterviewWs(ws, req, adminDb) {
     ws.send(JSON.stringify({ type: 'sessionStart', sessionId: state.sessionId, maxQuestions }));
 
     // ── Open Gemini Live WebSocket ──────────────────────────────────────────────
-    const geminiWs = new WS(getGeminiUrl());
+    let geminiWs;
+    try {
+        geminiWs = new WS(getGeminiUrl());
+    } catch (err) {
+        console.error('[server.js] Cannot open Gemini WS:', err.message);
+        if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify({ type: 'error', message: err.message }));
+            ws.close(1011, err.message);
+        }
+        return;
+    }
 
     geminiWs.on('open', () => {
         geminiWs.send(JSON.stringify({
             setup: {
-                model: 'models/gemini-2.5-flash-live',
+                model: 'models/gemini-3.1-flash-live-preview',
                 generationConfig: {
                     responseModalities: ['AUDIO'],
                     speechConfig: {
                         voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: voiceName || 'Kore' },
+                            prebuiltVoiceConfig: {
+                                voiceName: voiceName || 'Kore',
+                            },
                         },
                     },
-                    inputAudioTranscription: {},
-                    outputAudioTranscription: {},
                 },
+                realtimeInputConfig: {
+                    automaticActivityDetection: {
+                        // Low sensitivity = waits longer before declaring end-of-speech,
+                        // reducing false "user turn complete" detections during silence.
+                        startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
+                        endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+                    },
+                },
+                inputAudioTranscription: {},
+                outputAudioTranscription: {},
                 systemInstruction: {
                     parts: [{ text: systemPrompt }],
                 },
@@ -134,6 +157,16 @@ async function handleInterviewWs(ws, req, adminDb) {
                 if (geminiWs.readyState === WS.OPEN) geminiWs.send(pending);
             }
             state.pendingQueue = [];
+            // Auto-trigger the AI's opening greeting so the interview starts without
+            // the user needing to speak first.
+            if (geminiWs.readyState === WS.OPEN) {
+                geminiWs.send(JSON.stringify({
+                    clientContent: {
+                        turns: [{ role: 'user', parts: [{ text: 'begin' }] }],
+                        turnComplete: true,
+                    },
+                }));
+            }
             return;
         }
 
@@ -166,9 +199,17 @@ async function handleInterviewWs(ws, req, adminDb) {
             // Input transcription (text of what user said)
             if (sc.inputTranscription) {
                 const { text = '', finished = false } = sc.inputTranscription;
-                if (text) state.currentUserText += text;
+                // Drop non-ASCII chunks — Gemini can mis-transcribe short English phonemes
+                // (e.g. "hi" → Japanese "はい"). Only apply to the text content, not the
+                // finished flag, so the turn still closes properly.
+                const hasNonAscii = text && /[^\x00-\x7F]/.test(text);
+                const cleanText = hasNonAscii ? '' : text;
+                if (hasNonAscii) {
+                    console.warn('[server.js] Dropping non-ASCII user transcript chunk:', JSON.stringify(text));
+                }
+                if (cleanText) state.currentUserText += cleanText;
                 if (ws.readyState === ws.OPEN) {
-                    ws.send(JSON.stringify({ type: 'userTranscript', text, finished }));
+                    ws.send(JSON.stringify({ type: 'userTranscript', text: cleanText, finished }));
                 }
                 if (finished && state.currentUserText.trim()) {
                     state.messages.push({ role: 'user', content: state.currentUserText.trim(), timestamp: new Date().toISOString() });
@@ -178,6 +219,15 @@ async function handleInterviewWs(ws, req, adminDb) {
 
             // Turn complete
             if (sc.turnComplete) {
+                // Flush any user transcription that never received finished=true
+                if (state.currentUserText.trim()) {
+                    state.messages.push({ role: 'user', content: state.currentUserText.trim(), timestamp: new Date().toISOString() });
+                    if (ws.readyState === ws.OPEN) {
+                        ws.send(JSON.stringify({ type: 'userTranscript', text: '', finished: true }));
+                    }
+                    state.currentUserText = '';
+                }
+
                 state.aiTurnEndAt = Date.now();
                 state.userAudioStarted = false; // reset for next hesitation window
                 if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'turnComplete' }));
@@ -186,12 +236,43 @@ async function handleInterviewWs(ws, req, adminDb) {
                     state.messages.push({ role: 'assistant', content: state.currentAiText.trim(), timestamp: new Date().toISOString() });
                     state.currentAiText = '';
                 }
+
+                // F5: 15s silence nudge — if candidate doesn't respond, inject a gentle cue
+                clearTimeout(state.silenceNudgeTimer);
+                state.silenceNudgeTimer = null;
+                if (!state.isComplete) {
+                    const SILENCE_NUDGES = [
+                        "Take your time, there's no rush.",
+                        'Feel free to think out loud if that helps.',
+                        'No worries — take a moment to gather your thoughts.',
+                    ];
+                    state.silenceNudgeTimer = setTimeout(() => {
+                        if (state.isComplete || !state.geminiReady || geminiWs.readyState !== WS.OPEN) return;
+                        const nudge = SILENCE_NUDGES[Math.floor(Math.random() * SILENCE_NUDGES.length)];
+                        geminiWs.send(JSON.stringify({
+                            clientContent: {
+                                turns: [{ role: 'user', parts: [{ text: `[System: Candidate is silent. Gently say: "${nudge}" and then wait for them to respond.]` }] }],
+                                turnComplete: true,
+                            },
+                        }));
+                    }, 15000);
+                }
             }
 
             // Interrupted (user spoke over AI)
             if (sc.interrupted) {
                 if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'interrupted' }));
             }
+        }
+
+        // ── Gemini API-level error (wrong model name, auth, quota, etc.) ──────────
+        if (msg.error) {
+            const detail = msg.error.message || msg.error.status || JSON.stringify(msg.error);
+            console.error('[Gemini WS] API error:', detail);
+            if (ws.readyState === ws.OPEN) {
+                ws.send(JSON.stringify({ type: 'error', message: `Gemini API error: ${detail}` }));
+            }
+            return;
         }
 
         // ── Tool call: completeInterview ────────────────────────────────────────
@@ -220,6 +301,7 @@ async function handleInterviewWs(ws, req, adminDb) {
                             type: 'interviewComplete',
                             sessionId: state.sessionId,
                             messages: state.messages,
+                            hesitations: state.hesitations,
                         }));
                     }
                 }
@@ -234,9 +316,11 @@ async function handleInterviewWs(ws, req, adminDb) {
         }
     });
 
-    geminiWs.on('close', (code) => {
+    geminiWs.on('close', (code, reason) => {
+        const reasonStr = reason?.length ? reason.toString() : '';
+        console.error(`[Gemini WS] Closed: code=${code}${reasonStr ? ` reason="${reasonStr}"` : ''}`);
         if (!state.isComplete && ws.readyState === ws.OPEN) {
-            ws.send(JSON.stringify({ type: 'geminiClosed', code }));
+            ws.send(JSON.stringify({ type: 'geminiClosed', code, reason: reasonStr }));
             ws.close();
         }
     });
@@ -247,6 +331,10 @@ async function handleInterviewWs(ws, req, adminDb) {
         try { msg = JSON.parse(rawData.toString()); } catch { return; }
 
         if (msg.type === 'audio') {
+            // Cancel silence nudge timer as soon as user sends any audio
+            clearTimeout(state.silenceNudgeTimer);
+            state.silenceNudgeTimer = null;
+
             // Hesitation: time from AI turn-complete to first user audio chunk
             if (state.aiTurnEndAt !== null && !state.userAudioStarted) {
                 state.userAudioStarted = true;
@@ -268,7 +356,25 @@ async function handleInterviewWs(ws, req, adminDb) {
             }
         }
 
+        if (msg.type === 'history') {
+            // Replay conversation history into Gemini after a reconnect
+            if (Array.isArray(msg.messages) && msg.messages.length > 0 && geminiWs.readyState === WS.OPEN) {
+                geminiWs.send(JSON.stringify({
+                    clientContent: {
+                        turns: msg.messages.map(m => ({
+                            role: m.role === 'user' ? 'user' : 'model',
+                            parts: [{ text: m.content }],
+                        })),
+                        turnComplete: true,
+                    },
+                }));
+            }
+        }
+
         if (msg.type === 'text') {
+            // Cancel silence nudge when user submits text
+            clearTimeout(state.silenceNudgeTimer);
+            state.silenceNudgeTimer = null;
             // Text fallback: user typed and submitted manually
             const textMsg = JSON.stringify({
                 clientContent: {
@@ -288,7 +394,7 @@ async function handleInterviewWs(ws, req, adminDb) {
                 state.isComplete = true;
                 finalizeSession(state, userId, adminDb).catch(console.error);
                 if (ws.readyState === ws.OPEN) {
-                    ws.send(JSON.stringify({ type: 'interviewComplete', sessionId: state.sessionId, messages: state.messages }));
+                    ws.send(JSON.stringify({ type: 'interviewComplete', sessionId: state.sessionId, messages: state.messages, hesitations: state.hesitations }));
                 }
             }
             if (geminiWs.readyState === WS.OPEN || geminiWs.readyState === WS.CONNECTING) {
@@ -298,6 +404,8 @@ async function handleInterviewWs(ws, req, adminDb) {
     });
 
     ws.on('close', () => {
+        clearTimeout(state.silenceNudgeTimer);
+        state.silenceNudgeTimer = null;
         if (geminiWs.readyState === WS.OPEN || geminiWs.readyState === WS.CONNECTING) {
             geminiWs.close(1000, 'Browser disconnected');
         }
@@ -350,6 +458,12 @@ nextApp.prepare().then(() => {
         handle(req, res, parse(req.url, true));
     });
 
+    // Next.js provides getUpgradeHandler() so HMR WebSocket (/_next/webpack-hmr)
+    // is forwarded correctly instead of being destroyed.
+    const nextUpgradeHandler = typeof nextApp.getUpgradeHandler === 'function'
+        ? nextApp.getUpgradeHandler()
+        : null;
+
     const wss = new WebSocketServer({ noServer: true });
     wss.on('connection', (ws, req) => {
         handleInterviewWs(ws, req, adminDb).catch((err) => {
@@ -367,9 +481,14 @@ nextApp.prepare().then(() => {
             wss.handleUpgrade(req, socket, head, (ws) => {
                 wss.emit('connection', ws, req);
             });
-        } else {
-            socket.destroy();
+            return;
         }
+        // Forward all other WebSocket upgrades (HMR, etc.) to Next.js
+        if (nextUpgradeHandler) {
+            nextUpgradeHandler(req, socket, head);
+            return;
+        }
+        socket.destroy();
     });
 
     const port = parseInt(process.env.PORT || '3000', 10);

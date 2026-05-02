@@ -62,24 +62,32 @@ export async function POST(request) {
 Analyze the candidate's performance holistically and return a structured JSON feedback object with EXACTLY these fields:
 {
   "score": <integer 1-10>,
+  "communicationScore": <integer 1-10>,
+  "communicationFeedback": "<2-3 sentences analyzing HOW the candidate communicated: answer structure (did they use STAR or clear frameworks?), conciseness vs. rambling, confidence indicators (direct statements vs. constant hedging like 'I think maybe...'), and vocabulary clarity. Be specific — reference actual patterns from the transcript>",
   "hiringDecision": <"Strong Yes" | "Yes" | "Maybe" | "No">,
   "overallSummary": "<2-3 sentence honest, specific, human-sounding summary — reference what the candidate actually said>",
   "strengths": ["<specific, concrete strength referenced from the interview>", ...],
   "weaknesses": ["<specific, actionable area to improve>", ...],
   "suggestions": ["<specific, practical advice the candidate can act on before their next interview>", ...],
   "questionBreakdown": [
-    { "question": "<interviewer question>", "rating": <1-5>, "comment": "<one specific sentence about this answer — be honest, not generic>" },
+    { "question": "<interviewer question>", "rating": <1-5>, "comment": "<one specific sentence about this answer — be honest, not generic>", "expectedAnswer": "<2-3 sentence ideal answer a strong candidate would give for this question>" },
     ...
   ]
 }
-Scoring guide:
+Content scoring guide (score field):
 - 9-10 → Strong Yes (exceptional answers, confident, specific)
 - 7-8 → Yes (solid answers with minor gaps)
 - 5-6 → Maybe (some good points but significant gaps or vague answers)
 - 1-4 → No (consistently weak, vague, or off-topic answers)
 
+Communication scoring guide (communicationScore field):
+- 9-10: Structured, concise, specific — clear frameworks, direct confident statements
+- 7-8: Mostly clear with minor wandering or occasional hedging
+- 5-6: Noticeable structure issues — answers wander, key points buried, frequent hedging
+- 1-4: Very hard to follow, extensively vague or rambling
+
 Rules:
-- questionBreakdown must include every Q&A pair from the transcript.
+- questionBreakdown must include every Q&A pair from the transcript. Each entry must include expectedAnswer.
 - Be SPECIFIC — reference the candidate's actual words/answers, not generic platitudes.
 - If hesitation data is provided, factor it into your score and mention it where relevant.
 - Strengths and weaknesses should each have 2-4 items.
@@ -93,7 +101,7 @@ Rules:
             ],
             model: 'llama-3.3-70b-versatile',
             temperature: 0.35,
-            max_tokens: 2000,
+            max_tokens: 2400,
             response_format: { type: 'json_object' },
         });
 
@@ -122,6 +130,30 @@ Rules:
                 console.warn('[interview-feedback] Firestore update failed:', firestoreErr.message);
             }
         }
+
+        // F7: Fetch past scores for performance trend (last 3 completed sessions, same company+round)
+        let previousScores = [];
+        if (userId && userId !== 'guest' && companyName && roundType && sessionId !== 'local') {
+            try {
+                const snap = await adminDb
+                    .collection('users').doc(userId)
+                    .collection('interviewSessions')
+                    .where('companyName', '==', companyName)
+                    .where('roundType', '==', roundType)
+                    .where('isComplete', '==', true)
+                    .orderBy('completedAt', 'desc')
+                    .limit(8)
+                    .get();
+                snap.forEach(doc => {
+                    if (doc.id !== sessionId && previousScores.length < 3) {
+                        const s = doc.data()?.aiFeedback?.score;
+                        if (typeof s === 'number') previousScores.push(s);
+                    }
+                });
+                previousScores.reverse(); // oldest → newest
+            } catch { /* non-critical — trend is optional */ }
+        }
+        feedback.previousScores = previousScores;
 
         return NextResponse.json({ feedback });
     } catch (error) {

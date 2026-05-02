@@ -17,7 +17,7 @@ function createSessionToken(data) {
  */
 export async function POST(req) {
     try {
-        const { companySlug, roleId, roundType = 'technical', userId, companyId, companyName } = await req.json();
+        const { companySlug, roleId, roundType = 'technical', userId, companyId, companyName, userName } = await req.json();
 
         const { systemPrompt, maxQuestions } = await buildSystemPrompt({
             companyName,
@@ -26,7 +26,11 @@ export async function POST(req) {
             roleId,
             userId,
             companySlug,
+            userName,
         });
+
+        const VOICES = ['Puck', 'Kore', 'Charon', 'Fenrir', 'Aoede', 'Leda', 'Orus', 'Zephyr'];
+        const voiceName = VOICES[Math.floor(Math.random() * VOICES.length)];
 
         const tokenData = {
             systemPrompt,
@@ -37,13 +41,13 @@ export async function POST(req) {
             roundType,
             roleId: roleId || null,
             maxQuestions,
-            voiceName: 'Kore',
+            voiceName,
             exp: Date.now() + 3 * 60 * 1000, // 3-minute expiry to connect
         };
 
         const sessionToken = createSessionToken(tokenData);
 
-        return NextResponse.json({ sessionToken, maxQuestions, voiceName: 'Kore' });
+        return NextResponse.json({ sessionToken, maxQuestions, voiceName });
     } catch (error) {
         console.error('[POST /api/interview-session]', error);
         return NextResponse.json({ error: 'Failed to create interview session' }, { status: 500 });
