@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { signUp, signIn, signOut } from '@/lib/auth-helpers';
 
@@ -17,27 +17,51 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        let unsubFirestore = null;
+
+        const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            // Clean up any previous Firestore listener before setting up a new one
+            if (unsubFirestore) {
+                unsubFirestore();
+                unsubFirestore = null;
+            }
+
             if (firebaseUser) {
                 setUser(firebaseUser);
-                try {
-                    const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-                    setProfile(profileDoc.exists() ? profileDoc.data() : null);
-                } catch (err) {
-                    console.error("Failed to fetch user profile, possibly blocked by client:", err);
-                    setProfile(null);
-                }
+                // Real-time listener so profile updates immediately after payment
+                unsubFirestore = onSnapshot(
+                    doc(db, 'users', firebaseUser.uid),
+                    (snap) => {
+                        setProfile(snap.exists() ? snap.data() : null);
+                        setLoading(false);
+                    },
+                    (err) => {
+                        console.error('Profile listener error:', err);
+                        setProfile(null);
+                        setLoading(false);
+                    }
+                );
             } else {
                 setUser(null);
                 setProfile(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
-        return unsubscribe;
+
+        return () => {
+            unsubAuth();
+            if (unsubFirestore) unsubFirestore();
+        };
     }, []);
 
+    const isSubscribed =
+        profile?.subscription?.status === 'active' &&
+        profile?.subscription?.expiresAt?.toDate() > new Date();
+
+    const demoUsed = profile?.demo?.hasUsed ?? false;
+
     return (
-        <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut }}>
+        <AuthContext.Provider value={{ user, profile, loading, isSubscribed, demoUsed, signUp, signIn, signOut }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,0 +1,29 @@
+.root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: 28px 44px;
+    pointer-events: none;
+    z-index: 0;
+    transform: rotate(-20deg) scale(1.6);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, var(--wm-opacity, 0.035));
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+
+@media print {
+    .root {
+        display: none;
+    }
+}

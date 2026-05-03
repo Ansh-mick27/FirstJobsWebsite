@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CompanyCard from '@/components/CompanyCard';
+import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
 
 const ROUND_FILTERS = [
@@ -55,6 +56,7 @@ function RoleSelectionModal({ company, onClose }) {
 
 export default function CompaniesPage() {
     const router = useRouter();
+    const { isSubscribed, demoUsed, loading: authLoading } = useAuth();
     const [activeFilter, setActiveFilter] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [companies, setCompanies] = useState([]);
@@ -88,6 +90,10 @@ export default function CompaniesPage() {
     }, [searchQuery, activeFilter]);
 
     const handleCompanyClick = async (company) => {
+        if (!authLoading && !isSubscribed && demoUsed) {
+            router.push('/pricing');
+            return;
+        }
         setLoadingSlug(company.slug);
         
         try {

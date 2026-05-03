@@ -8,6 +8,9 @@ import { Play, Send, ChevronRight, ChevronLeft, X, Bookmark, AlertTriangle, Chec
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
+import useContentProtection from '@/hooks/useContentProtection';
+import useFullscreen from '@/hooks/useFullscreen';
+import Watermark from '@/components/Watermark';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -82,8 +85,36 @@ export default function MockTest() {
     const [showWarning, setShowWarning] = useState(false);
     const [warningMsg, setWarningMsg] = useState('');
     const [results, setResults] = useState(null);
+    const [devtoolsOpen, setDevtoolsOpen] = useState(false);
 
     const handleSubmitRef = useRef(null);
+
+    const userEmail = user?.email || '';
+
+    useContentProtection({
+        blockCopy: true,
+        blockPrint: true,
+        blockRightClick: true,
+        blockDevtools: phase === 'active',
+        onDevtoolsOpen: () => setDevtoolsOpen(true),
+        enabled: phase === 'active' || phase === 'results',
+    });
+
+    const { isFullscreen, exitCount: fsExits, requestFullscreen } = useFullscreen({
+        enabled: phase === 'active',
+        onExitAttempt: () => {
+            setWarnings(w => w + 1);
+            setWarningMsg(`⚠️ Fullscreen exit detected. 3 exits will auto-submit.`);
+            setShowWarning(true);
+            setTimeout(() => setShowWarning(false), 4000);
+        },
+        maxExits: 3,
+        onMaxExitsReached: () => {
+            setWarningMsg('⚠️ 3 fullscreen exits detected. Auto-submitting...');
+            setShowWarning(true);
+            setTimeout(() => handleSubmitRef.current?.(), 2000);
+        },
+    });
 
     // ─── Fetch company info ──────────────────────────────────────────────────────
     useEffect(() => {
@@ -233,6 +264,7 @@ export default function MockTest() {
             setCode({});
             setCodeResults({});
             setPhase('active');
+            requestFullscreen();
         } catch {
             const qs = getSampleQuestions(roundType, numQuestions);
             setQuestions(qs);
@@ -240,6 +272,7 @@ export default function MockTest() {
             totalTime.current = t;
             setTimeLeft(t);
             setPhase('active');
+            requestFullscreen();
         }
     }
 
@@ -400,7 +433,8 @@ export default function MockTest() {
         const perf = getPerformanceLabel(pct);
 
         return (
-            <div className={styles.testContainer}>
+            <div className={styles.testContainer} style={{ position: 'relative' }}>
+                <Watermark email={userEmail} />
                 <div className={styles.resultsScreen}>
                     <div className={styles.resultsCard}>
                         {/* Score Ring */}
@@ -480,6 +514,23 @@ export default function MockTest() {
     // ─── ACTIVE TEST ──────────────────────────────────────────────────────────
     return (
         <div className={styles.testContainer}>
+            {/* Fullscreen enforcement overlay */}
+            {!isFullscreen && (
+                <div className="fullscreen-blocker">
+                    <h2>Fullscreen Required</h2>
+                    <p>You exited fullscreen. Violation {fsExits}/3 — 3 exits will auto-submit the test.</p>
+                    <button onClick={requestFullscreen}>Return to Fullscreen</button>
+                </div>
+            )}
+
+            {/* DevTools blocker overlay */}
+            {devtoolsOpen && (
+                <div className="devtools-blocker">
+                    <h2>Developer Tools Detected</h2>
+                    <p>Please close DevTools to continue the test.</p>
+                </div>
+            )}
+
             {/* Warning Toast */}
             {showWarning && (
                 <div className={styles.warningToast}>
@@ -681,6 +732,13 @@ export default function MockTest() {
                                             scrollBeyondLastLine: false,
                                             padding: { top: 16 },
                                             fontLigatures: true,
+                                            contextmenu: false,
+                                        }}
+                                        onMount={(editor, monaco) => {
+                                            editor.addCommand(
+                                                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV,
+                                                () => {}
+                                            );
                                         }}
                                     />
                                 </div>

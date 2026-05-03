@@ -6,6 +6,9 @@ import { Mic, MicOff, Send, X, Volume2, VolumeX, Bot, ChevronLeft, ChevronDown, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
+import useContentProtection from '@/hooks/useContentProtection';
+import useFullscreen from '@/hooks/useFullscreen';
+import Watermark from '@/components/Watermark';
 
 const ROUND_TYPES = [
     { value: 'technical', label: 'Technical', desc: 'DSA, System Design, CS Fundamentals' },
@@ -159,7 +162,7 @@ function interviewReducer(state, action) {
 export default function MockInterview() {
     const params = useParams();
     const router = useRouter();
-    const { user, profile, loading: authLoading } = useAuth();
+    const { user, profile, loading: authLoading, isSubscribed, demoUsed } = useAuth();
     const companySlug = params?.companySlug || 'company';
     const searchParams = useSearchParams();
     const roleId = searchParams?.get('roleId') || null;
@@ -169,6 +172,13 @@ export default function MockInterview() {
             router.push(`/login?next=${encodeURIComponent(`/interview/${companySlug}`)}`);
         }
     }, [authLoading, user, router, companySlug]);
+
+    // Paywall guard — redirect demo-used unpaid users to pricing
+    useEffect(() => {
+        if (!authLoading && user && !isSubscribed && demoUsed) {
+            router.push('/pricing');
+        }
+    }, [authLoading, user, isSubscribed, demoUsed, router]);
 
     // ── Persistent UI state ───────────────────────────────────────────────────
     const [phase, setPhase] = useState('config');
@@ -188,6 +198,29 @@ export default function MockInterview() {
     const [isUserSpeaking, setIsUserSpeaking] = useState(false);
     const [textInput, setTextInput] = useState('');
     const [connectionError, setConnectionError] = useState('');
+    const [devtoolsOpen, setDevtoolsOpen] = useState(false);
+    const [fsToast, setFsToast] = useState(false);
+
+    const userEmail = user?.email || '';
+
+    useContentProtection({
+        blockCopy: true,
+        blockPrint: true,
+        blockRightClick: true,
+        blockDevtools: phase === 'active',
+        onDevtoolsOpen: () => setDevtoolsOpen(true),
+        enabled: phase === 'active' || phase === 'feedback',
+    });
+
+    const { isFullscreen, exitCount: fsExits, requestFullscreen } = useFullscreen({
+        enabled: phase === 'active',
+        onExitAttempt: () => {
+            setFsToast(true);
+            setTimeout(() => setFsToast(false), 5000);
+        },
+        maxExits: null,
+        onMaxExitsReached: () => {},
+    });
 
     // ── Interview state via reducer ───────────────────────────────────────────
     const [iv, dispatch] = useReducer(interviewReducer, INITIAL_INTERVIEW_STATE);
@@ -506,6 +539,7 @@ export default function MockInterview() {
         setElapsedSec(0);
         setIsInterviewDone(false);
         setConnectionError('');
+        requestFullscreen();
         dispatch({ type: 'RESET' });
         setIsLoading(true);
         partialAiRef.current = '';
@@ -513,19 +547,26 @@ export default function MockInterview() {
 
         try {
             // 1. Get signed session token (server builds system prompt)
+            const idToken = await user.getIdToken();
             const res = await fetch('/api/interview-session', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`,
+                },
                 body: JSON.stringify({
                     companySlug,
                     roleId,
                     roundType,
-                    userId: user?.uid || null,
                     companyId: company?.id || companySlug,
                     companyName: company?.name || companySlug,
                     userName: profile?.name || null,
                 }),
             });
+            if (res.status === 401 || res.status === 403) {
+                router.push('/pricing');
+                return;
+            }
             if (!res.ok) throw new Error(`Session init failed: ${res.status}`);
             const { sessionToken } = await res.json();
 
@@ -857,7 +898,8 @@ export default function MockInterview() {
             const ringColor = scoreRingColor(feedback.score);
 
             return (
-                <div className={styles.container}>
+                <div className={styles.container} style={{ position: 'relative' }}>
+                    <Watermark email={userEmail} />
                     <div className={styles.feedbackScreen}>
                         <div className={styles.feedbackCard}>
                             {feedback.hiringDecision && (
@@ -1008,6 +1050,30 @@ export default function MockInterview() {
 
     return (
         <div className={styles.container}>
+            {/* Fullscreen enforcement overlay */}
+            {!isFullscreen && (
+                <div className="fullscreen-blocker">
+                    <h2>Fullscreen Required</h2>
+                    <p>Please return to fullscreen to continue your interview.</p>
+                    <button onClick={requestFullscreen}>Re-enter Fullscreen</button>
+                </div>
+            )}
+
+            {/* DevTools blocker overlay */}
+            {devtoolsOpen && (
+                <div className="devtools-blocker">
+                    <h2>Developer Tools Detected</h2>
+                    <p>Please close DevTools to continue your interview.</p>
+                </div>
+            )}
+
+            {/* Fullscreen exit toast */}
+            {fsToast && (
+                <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 9997, background: 'rgba(255,165,0,0.12)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: '8px', padding: '0.75rem 1.25rem', color: '#f59e0b', fontSize: '0.9rem', maxWidth: '340px' }}>
+                    ⚠️ Fullscreen exit detected ({fsExits}). Please stay in fullscreen during the interview.
+                </div>
+            )}
+
             {/* Top Bar */}
             <div className={styles.topBar}>
                 <button className={styles.btnExit} onClick={() => { if (confirm('Exit interview?')) { wsRef.current?.close(); router.back(); } }} title="Exit">
@@ -1095,7 +1161,8 @@ export default function MockInterview() {
                 </div>
 
                 {/* Chat Panel */}
-                <div className={styles.chatPanel}>
+                <div className={styles.chatPanel} style={{ position: 'relative' }}>
+                    <Watermark email={userEmail} />
                     <div className={styles.chatHistory}>
                         {/* Show while connected but before AI's first word */}
                         <AnimatePresence>

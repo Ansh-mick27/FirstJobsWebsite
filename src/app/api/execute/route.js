@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 /**
  * Judge0 CE language IDs — https://ce.judge0.com/languages/
@@ -127,6 +128,17 @@ async function runOneTestCase(languageId, code, stdin, expectedOutput) {
  * Body: { language: string, code: string, testCases: { input: string, output: string }[] }
  */
 export async function POST(request) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+        || request.headers.get('x-real-ip')
+        || '127.0.0.1';
+    const { allowed, retryAfter } = checkRateLimit(ip, 'execute');
+    if (!allowed) {
+        return NextResponse.json({ error: 'Too many requests' }, {
+            status: 429,
+            headers: { 'Retry-After': String(retryAfter) },
+        });
+    }
+
     let body;
     try {
         body = await request.json();

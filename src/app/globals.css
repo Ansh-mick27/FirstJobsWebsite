@@ -161,3 +161,89 @@ select:focus {
   margin: 0 auto;
   padding: 0 var(--container-padding);
 }
+
+/* ── Content Protection ──────────────────────────────────────────────────── */
+
+@media print {
+  .no-print { display: none !important; }
+}
+
+.protected-surface,
+.protected-surface * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Fullscreen enforcement overlay — above all page content */
+.fullscreen-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(3, 4, 10, 0.97);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.fullscreen-blocker h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.fullscreen-blocker p {
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.fullscreen-blocker button {
+  padding: 0.625rem 1.5rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.fullscreen-blocker button:hover {
+  opacity: 0.85;
+}
+
+/* DevTools detection overlay */
+.devtools-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  background: rgba(3, 4, 10, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+}
+
+.devtools-blocker h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--danger);
+  margin: 0;
+}
+
+.devtools-blocker p {
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 380px;
+  line-height: 1.6;
+}

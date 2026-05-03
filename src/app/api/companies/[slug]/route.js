@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 /**
  * GET /api/companies/[slug]
@@ -7,6 +8,17 @@ import { NextResponse } from 'next/server';
  * Questions are returned WITHOUT correctAnswer (security — only returned post-submission).
  */
 export async function GET(request, { params }) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+        || request.headers.get('x-real-ip')
+        || '127.0.0.1';
+    const { allowed, retryAfter } = checkRateLimit(ip, 'companies');
+    if (!allowed) {
+        return NextResponse.json({ error: 'Too many requests' }, {
+            status: 429,
+            headers: { 'Retry-After': String(retryAfter) },
+        });
+    }
+
     try {
         const { slug } = await params;
 

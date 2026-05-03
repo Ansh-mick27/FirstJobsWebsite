@@ -59,6 +59,19 @@
 // ---------------------------------------------------------------------------
 
 /**
+ * @typedef {Object} UserSubscription
+ * @property {'free'|'active'} status
+ * @property {import('firebase-admin/firestore').Timestamp|null} expiresAt - null if never paid
+ * @property {string|null} razorpayPaymentId - most recent successful Razorpay payment ID
+ */
+
+/**
+ * @typedef {Object} UserDemo
+ * @property {boolean} hasUsed      - true once the first interview session token is issued
+ * @property {string|null} companySlug - which company the demo was used on
+ */
+
+/**
  * @typedef {Object} UserProfile
  * @property {string} uid        - Matches Firebase Auth UID
  * @property {string} email
@@ -66,6 +79,8 @@
  * @property {string} rollNo
  * @property {import('firebase-admin/firestore').Timestamp} createdAt
  * @property {import('firebase-admin/firestore').Timestamp} lastActive
+ * @property {UserSubscription} subscription - Razorpay paywall subscription state
+ * @property {UserDemo} demo                 - One-time free demo tracking
  */
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 /**
  * GET /api/companies
@@ -8,6 +9,17 @@ import { NextResponse } from 'next/server';
  * Filtering is done client-side since Firestore free tier lacks full-text search.
  */
 export async function GET(request) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+        || request.headers.get('x-real-ip')
+        || '127.0.0.1';
+    const { allowed, retryAfter } = checkRateLimit(ip, 'companies');
+    if (!allowed) {
+        return NextResponse.json({ error: 'Too many requests' }, {
+            status: 429,
+            headers: { 'Retry-After': String(retryAfter) },
+        });
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.toLowerCase() || '';
     const roundFilter = searchParams.get('round') || '';

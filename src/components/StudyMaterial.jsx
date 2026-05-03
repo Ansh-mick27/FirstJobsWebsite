@@ -8,6 +8,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { SYLLABI, ROLE_SYLLABI, IMPORTANCE_META, getRoleSyllabus } from '@/data/syllabi';
 import styles from './StudyMaterial.module.css';
+import { useAuth } from '@/context/AuthContext';
+import useContentProtection from '@/hooks/useContentProtection';
+import Watermark from '@/components/Watermark';
 
 const FILTERS = [
     { id: 'all', label: 'All Topics' },
@@ -357,8 +360,11 @@ function AllRolesSyllabusView({ slug, roles, companyName }) {
 // ─── Main Export ──────────────────────────────────────────────────────────────
 export default function StudyMaterial({ slug = '', companyName = '', syllabus: syllabusFromDb, roleName = '', roles = null }) {
     // ── ALL HOOKS FIRST — never below an early return ──────────────────────
+    const { user } = useAuth();
+    const userEmail = user?.email || '';
     const [filter, setFilter] = useState('all');
     const [openIds, setOpenIds] = useState(new Set());
+    useContentProtection({ blockCopy: true, blockRightClick: true, blockPrint: true });
 
     // Determine which syllabus to display for a single-role or company view
     // Priority: static ROLE_SYLLABI > Firestore saved > company-level SYLLABI
@@ -399,7 +405,12 @@ export default function StudyMaterial({ slug = '', companyName = '', syllabus: s
 
     // All-Roles grouped view (when roles prop is passed and no specific role selected)
     if (roles !== null) {
-        return <AllRolesSyllabusView slug={slug} roles={roles} companyName={companyName} />;
+        return (
+            <div style={{ position: 'relative' }}>
+                <Watermark email={userEmail} />
+                <AllRolesSyllabusView slug={slug} roles={roles} companyName={companyName} />
+            </div>
+        );
     }
 
     // No syllabus available
@@ -420,7 +431,8 @@ export default function StudyMaterial({ slug = '', companyName = '', syllabus: s
     if (isFlat) {
         const totalH = resolvedSyllabus.topics.reduce((s, t) => s + (Number(t.studyHours) || 0), 0);
         return (
-            <div className={styles.root}>
+            <div className={styles.root} style={{ position: 'relative' }}>
+                <Watermark email={userEmail} />
                 <div className={styles.overviewCard}>
                     <div className={styles.overviewLeft}>
                         <p className={styles.overviewLabel}>SYLLABUS OVERVIEW</p>
@@ -458,7 +470,8 @@ export default function StudyMaterial({ slug = '', companyName = '', syllabus: s
 
     // Rich format (static SYLLABI or ROLE_SYLLABI)
     return (
-        <div className={styles.root}>
+        <div className={styles.root} style={{ position: 'relative' }}>
+            <Watermark email={userEmail} />
             <div className={styles.overviewCard}>
                 <div className={styles.overviewLeft}>
                     <p className={styles.overviewLabel}>SYLLABUS OVERVIEW</p>

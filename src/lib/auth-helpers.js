@@ -35,6 +35,8 @@ export async function signUp(email, password, name, rollNo) {
         rollNo,
         createdAt: serverTimestamp(),
         lastActive: serverTimestamp(),
+        subscription: { status: 'free', expiresAt: null, razorpayPaymentId: null },
+        demo: { hasUsed: false, companySlug: null },
     });
 
     return user;

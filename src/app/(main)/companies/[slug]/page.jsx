@@ -7,6 +7,7 @@ import { ArrowRight, BrainCircuit, Terminal, BookOpen, Clock, LayoutList, Chevro
 import StudyMaterial from '@/components/StudyMaterial';
 import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
+import useContentProtection from '@/hooks/useContentProtection';
 
 // Static tab definitions — icons created once at module load, never re-created per render
 const ALL_TABS = [
@@ -20,7 +21,8 @@ export default function CompanyDetail() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, isSubscribed, demoUsed } = useAuth();
+    useContentProtection({ blockCopy: true, blockRightClick: true, blockPrint: true });
     const slug = params?.slug || '';
 
     const initialRoleId = searchParams?.get('roleId') || '';
@@ -37,6 +39,13 @@ export default function CompanyDetail() {
             router.push(`/login?next=${encodeURIComponent(`/companies/${slug}`)}`);
         }
     }, [authLoading, user, router, slug]);
+
+    // Paywall guard — redirect demo-used unpaid users to pricing
+    useEffect(() => {
+        if (!authLoading && user && !isSubscribed && demoUsed) {
+            router.push('/pricing');
+        }
+    }, [authLoading, user, isSubscribed, demoUsed, router]);
 
     // Scroll to top on mount
     useEffect(() => {

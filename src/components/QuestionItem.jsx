@@ -1,33 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import styles from './QuestionItem.module.css';
+import useContentProtection from '@/hooks/useContentProtection';
 
 export default function QuestionItem({ question }) {
     const [isOpen, setIsOpen] = useState(false);
     const { user } = useAuth();
     const userEmail = user?.email || 'unknown@example.com';
-
-    // ─── Disable right-click over question content ───────────────────────────────
-    const handleContextMenu = (e) => {
-        e.preventDefault();
-        return false;
-    };
-
-    // ─── Block copy/select shortcuts ─────────────────────────────────────────────
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && ['c', 'C', 'a', 'A', 'x', 'X', 'p', 'P'].includes(e.key)) {
-                e.preventDefault();
-                return false;
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    useContentProtection({ blockCopy: true, blockRightClick: true, blockPrint: true });
 
     return (
         <div className={styles.container}>
@@ -50,10 +33,7 @@ export default function QuestionItem({ question }) {
             </button>
 
             {isOpen && (
-                <div
-                    className={styles.content}
-                    onContextMenu={handleContextMenu}
-                >
+                <div className={styles.content}>
                     {/* Watermark grid */}
                     <div className={styles.watermarkContainer} aria-hidden="true">
                         {Array.from({ length: 16 }).map((_, i) => (
