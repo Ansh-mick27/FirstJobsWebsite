@@ -11,8 +11,9 @@ import styles from './page.module.css';
 import useContentProtection from '@/hooks/useContentProtection';
 import useFullscreen from '@/hooks/useFullscreen';
 import Watermark from '@/components/Watermark';
+import { generateStarterCode } from '@/lib/codeHarness';
 
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+const Editor = dynamic(() => import('@/components/MonacoEditor'), { ssr: false });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatTime = (secs) => {
@@ -71,6 +72,7 @@ export default function MockTest() {
     const [markedForReview, setMarkedForReview] = useState({});
     const [code, setCode] = useState({});
     const [codeResults, setCodeResults] = useState({});
+    const [codeResultsSource, setCodeResultsSource] = useState({});
     const [isRunning, setIsRunning] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState('javascript');
     const [showCodeResults, setShowCodeResults] = useState(false);
@@ -263,6 +265,7 @@ export default function MockTest() {
             setAnswers({});
             setCode({});
             setCodeResults({});
+            setCodeResultsSource({});
             setPhase('active');
             requestFullscreen();
         } catch {
@@ -283,9 +286,17 @@ export default function MockTest() {
         setIsRunning(true);
         setShowCodeResults(true);
 
-        const testCases = submitAll
-            ? (q.testCases || q.visibleTestCases || getDefaultTestCases())
-            : (q.visibleTestCases || getDefaultTestCases());
+        // "Run" uses only visible test cases; "Submit" uses the full set
+        const visibleTcs = q.visibleTestCases || [];
+        const allTcs = q.testCases || visibleTcs;
+        const testCases = (submitAll ? allTcs : visibleTcs).length > 0
+            ? (submitAll ? allTcs : visibleTcs)
+            : getDefaultTestCases();
+
+        const userCode = code[q.id]?.[selectedLanguage]
+            ?? q.starterCode?.[selectedLanguage]
+            ?? (q.functionSignature ? generateStarterCode(selectedLanguage, q.functionSignature) : null)
+            ?? STARTER_CODE[selectedLanguage];
 
         try {
             const res = await fetch('/api/execute', {
@@ -293,12 +304,14 @@ export default function MockTest() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     language: PISTON_LANG[selectedLanguage] || selectedLanguage,
-                    code: code[q.id] || STARTER_CODE[selectedLanguage],
+                    code: userCode,
                     testCases,
+                    ...(q.functionSignature ? { functionSignature: q.functionSignature } : {}),
                 }),
             });
             const data = await res.json();
             setCodeResults(prev => ({ ...prev, [q.id]: data.results || [] }));
+            setCodeResultsSource(prev => ({ ...prev, [q.id]: data.source || 'judge0' }));
             if (submitAll) {
                 const allPassed = data.results?.every(r => r.passed);
                 setAnswers(prev => ({ ...prev, [q.id]: allPassed ? 'passed' : 'attempted' }));
@@ -721,10 +734,19 @@ export default function MockTest() {
 
                                 <div className={styles.editorWrapper}>
                                     <Editor
+                                        key={`${q.id}-${selectedLanguage}`}
                                         height="65vh"
                                         language={selectedLanguage}
-                                        value={code[q.id] || q.starterCode?.[selectedLanguage] || STARTER_CODE[selectedLanguage]}
-                                        onChange={(value) => setCode(prev => ({ ...prev, [q.id]: value }))}
+                                        value={
+                                            code[q.id]?.[selectedLanguage]
+                                            ?? q.starterCode?.[selectedLanguage]
+                                            ?? (q.functionSignature ? generateStarterCode(selectedLanguage, q.functionSignature) : null)
+                                            ?? STARTER_CODE[selectedLanguage]
+                                        }
+                                        onChange={(value) => setCode(prev => ({
+                                            ...prev,
+                                            [q.id]: { ...prev[q.id], [selectedLanguage]: value },
+                                        }))}
                                         theme="vs-dark"
                                         options={{
                                             fontSize: 14,
@@ -765,7 +787,14 @@ export default function MockTest() {
                                 {showCodeResults && codeResults[q.id] && (
                                     <div className={styles.codeResultsPanel}>
                                         <div className={styles.resultsHeader}>
-                                            <span>Test Results</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span>Test Results</span>
+                                                {codeResultsSource[q.id] === 'llm' && (
+                                                    <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(168,85,247,0.15)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.3)' }}>
+                                                        AI estimate (judge offline)
+                                                    </span>
+                                                )}
+                                            </div>
                                             <button className={styles.closeResults} onClick={() => setShowCodeResults(false)}>
                                                 <X size={14} />
                                             </button>

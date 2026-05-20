@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rateLimiter';
+import { buildExecutableCode } from '@/lib/codeHarness';
+import { groqDryRun } from '@/lib/groqExecutor';
 
 /**
  * Judge0 CE language IDs — https://ce.judge0.com/languages/
@@ -76,6 +78,7 @@ async function runOneTestCase(languageId, code, stdin, expectedOutput) {
             stderr: isTimeout
                 ? '⏱ Code runner is busy. Please try again in a few seconds.'
                 : `Submit failed: ${err.message}`,
+            _judgeDown: true,
         };
     }
 
@@ -99,6 +102,8 @@ async function runOneTestCase(languageId, code, stdin, expectedOutput) {
             const actual = stdout.trim();
             const hasError = data.status.id > 3; // 3=Accepted
 
+            // _judgeDown is NOT set here — Judge0 ran the code and returned a result.
+            // A compile error or wrong answer is the user's problem, not an outage.
             return {
                 input: stdin,
                 expected,
@@ -114,12 +119,14 @@ async function runOneTestCase(languageId, code, stdin, expectedOutput) {
         }
     }
 
+    // Poll deadline exhausted — Judge0 never responded, treat as infrastructure failure
     return {
         input: stdin,
         expected,
         actual: '',
         passed: false,
         stderr: '⏱ Execution timed out waiting for judge response. Try again.',
+        _judgeDown: true,
     };
 }
 
@@ -146,7 +153,7 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const { language, code, testCases } = body;
+    const { language, code, testCases, functionSignature } = body;
 
     if (!language || !code || !Array.isArray(testCases) || testCases.length === 0) {
         return NextResponse.json(
@@ -163,11 +170,27 @@ export async function POST(request) {
         );
     }
 
+    // Wrap the user's function with a harness when a signature is provided.
+    // Falls back to raw stdin/stdout for questions without a functionSignature.
+    const executableCode = buildExecutableCode(code, language.toLowerCase(), functionSignature ?? null);
+
     try {
-        // Run all test cases concurrently
-        const results = await Promise.all(
-            testCases.map(tc => runOneTestCase(langId, code, tc.input ?? '', tc.output))
+        // Run all test cases concurrently against Judge0
+        const judge0Results = await Promise.all(
+            testCases.map(tc => runOneTestCase(langId, executableCode, tc.input ?? '', tc.output))
         );
+
+        // If every result is a Judge0 infrastructure failure (network error, timeout,
+        // service outage) — not a user code error — fall back to Groq dry run.
+        const allDown = judge0Results.every(r => r._judgeDown);
+        if (allDown) {
+            console.warn('[POST /api/execute] Judge0 unreachable — falling back to Groq dry run');
+            const llmResults = await groqDryRun(code, language.toLowerCase(), testCases, functionSignature ?? null);
+            return NextResponse.json({ results: llmResults, source: 'llm' });
+        }
+
+        // Strip internal flag before returning Judge0 results
+        const results = judge0Results.map(({ _judgeDown, ...r }) => r);
         return NextResponse.json({ results });
     } catch (error) {
         console.error('[POST /api/execute]', error);
